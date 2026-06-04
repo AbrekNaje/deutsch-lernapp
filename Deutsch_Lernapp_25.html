@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deutsch Lernapp</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ac:#534AB7;--acl:#EEEDFE;--acm:#7F77DD;
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#efefec;
+  --txt:#1a1a1a;--txt2:#666;--txt3:#999;
+  --brd:rgba(0,0,0,0.12);--brd2:rgba(0,0,0,0.25);
+  --rad:8px;--radlg:12px;
+  --success:#3B6D11;--successbg:#EAF3DE;
+  --danger:#A32D2D;--dangerbg:#FCEBEB;
+  --warn:#854F0B;--warnbg:#FAEEDA;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1a1a;--bg2:#252525;--bg3:#2e2e2e;
+    --txt:#f0f0f0;--txt2:#aaa;--txt3:#777;
+    --brd:rgba(255,255,255,0.12);--brd2:rgba(255,255,255,0.25);
+    --acl:#26215C;--acm:#7F77DD;
+    --successbg:#173404;--dangerbg:#501313;--warnbg:#412402;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);max-width:540px;margin:0 auto;min-height:100vh}
+#app{padding:.75rem;position:relative}
+.hidden{display:none!important}
+.scr{display:none;flex-direction:column;gap:10px}
+.scr.active{display:flex}
+.topbar{display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:.5px solid var(--brd)}
+.topbar h1{font-size:18px;font-weight:500;flex:1;color:var(--txt)}
+.badge{font-size:13px;background:var(--acl);color:var(--ac);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.btn{background:transparent;border:.5px solid var(--brd2);border-radius:var(--rad);padding:10px 14px;font-size:16px;cursor:pointer;color:var(--txt);width:100%;text-align:center;transition:background .15s}
+.btn:hover{background:var(--bg2)}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+.btn.pri:hover{background:var(--acm)}
+.btn.sm{padding:6px 10px;font-size:15px;width:auto}
+.brow{display:flex;gap:8px}.brow .btn{flex:1}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ncard{background:var(--bg);border:.5px solid var(--brd);border-radius:var(--radlg);padding:.9rem;cursor:pointer;text-align:left;transition:background .15s}
+.ncard:hover{background:var(--bg2)}
+.ncard i{font-size:22px;color:var(--acm);display:block;margin-bottom:5px}
+.ncard .nt{font-size:16px;font-weight:500;color:var(--txt)}
+.ncard .ns{font-size:14px;color:var(--txt2);margin-top:2px}
+.sbox{background:var(--bg2);border-radius:var(--rad);padding:.75rem;text-align:center}
+.sbox .sv{font-size:24px;font-weight:500;color:var(--txt)}
+.sbox .sl{font-size:13px;color:var(--txt2);margin-top:2px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.gtabs{display:flex;gap:3px;background:var(--bg2);border-radius:var(--rad);padding:3px}
+.gtab{flex:1;text-align:center;font-size:14px;padding:7px 2px;border-radius:6px;cursor:pointer;color:var(--txt2);border:none;background:none;font-weight:500}
+.gtab.active{background:var(--bg);color:var(--txt)}
+.gtab.n.active{background:#E6F1FB;color:#185FA5}
+.gtab.v.active{background:#FAEEDA;color:#854F0B}
+.gtab.a.active{background:#EAF3DE;color:#3B6D11}
+.lbl{font-size:15px;color:var(--txt2);display:block;margin-bottom:4px;margin-top:8px}
+input,select,textarea{width:100%;padding:9px 12px;border:.5px solid var(--brd2);border-radius:var(--rad);font-size:16px;background:var(--bg);color:var(--txt);font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acm)}
+textarea{resize:vertical;min-height:54px}
+.progbar{height:4px;background:var(--bg2);border-radius:99px;overflow:hidden}
+.progfill{height:100%;background:var(--ac);border-radius:99px;transition:width .3s}
+.qbox{background:var(--bg2);border-radius:var(--rad);padding:1rem;text-align:center}
+.qbox .qlbl{font-size:14px;color:var(--txt2);margin-bottom:4px}
+.qbox .qword{font-size:24px;font-weight:500;color:var(--txt)}
+.qbox .qhint{font-size:14px;color:var(--txt2);margin-top:4px}
+.opt{background:var(--bg);border:.5px solid var(--brd);border-radius:var(--rad);padding:12px 14px;cursor:pointer;font-size:16px;text-align:left;color:var(--txt);width:100%;margin-bottom:7px;transition:background .15s}
+.opt:hover:not(:disabled){background:var(--bg2)}
+.opt.ok{background:var(--successbg);border-color:var(--success);color:var(--success)}
+.opt.no{background:var(--dangerbg);border-color:var(--danger);color:var(--danger)}
+.lbar{display:flex;height:8px;border-radius:99px;overflow:hidden;gap:1px;background:var(--bg2)}
+.lseg{flex:1;border-radius:2px;transition:background .12s}
+.lseg.ok{background:#639922}
+.lseg.no{background:#E24B4A}
+.winp{font-size:19px;font-weight:500;text-align:center;padding:13px 12px;border-radius:var(--rad);border:.5px solid var(--brd2);width:100%;background:var(--bg);color:var(--txt)}
+.winp:focus{outline:none;border-color:var(--acm)}
+.winp.ok{border-color:var(--success);background:var(--successbg);color:var(--success)}
+.winp.no{border-color:var(--danger);background:var(--dangerbg);color:var(--danger)}
+.ubar{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.ubtn{background:var(--bg2);border:.5px solid var(--brd);border-radius:var(--rad);padding:7px 12px;font-size:15px;cursor:pointer;color:var(--txt)}
+.ubtn:hover{background:var(--acl);color:var(--ac)}
+.wbadge{display:none;font-size:11px;color:var(--warn);background:var(--warnbg);border-radius:99px;padding:2px 8px;text-align:center}
+.wbadge.show{display:block}
+.fbrow{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;padding:4px 0;flex-wrap:wrap}
+.fbrow .ok{color:var(--success);font-weight:500}
+.fbrow .no{color:var(--danger);font-weight:500}
+.wli{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:.5px solid var(--brd)}
+.wli:last-child{border-bottom:none}
+.wli-l{flex:1}
+.wli-w{font-size:16px;font-weight:500;color:var(--txt)}
+.wli-t{font-size:14px;color:var(--txt2)}
+.delbtn{background:none;border:none;cursor:pointer;color:var(--txt2);padding:4px;font-size:18px}
+.delbtn:hover{color:var(--danger)}
+.conj-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.conj-cell .clbl{font-size:13px;color:var(--txt2);display:block;margin-bottom:2px}
+.pron-sel{display:flex;gap:5px;flex-wrap:wrap}
+.pron-btn{background:var(--bg2);border:.5px solid var(--brd);border-radius:99px;padding:5px 12px;font-size:15px;cursor:pointer;color:var(--txt2)}
+.pron-btn.active{background:var(--acl);color:var(--ac);border-color:var(--acm)}
+.tense-sel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.tense-btn{background:var(--bg2);border:.5px solid var(--brd);border-radius:var(--rad);padding:9px 6px;font-size:14px;cursor:pointer;color:var(--txt2);text-align:center}
+.tense-btn.active{background:var(--acl);color:var(--ac);border-color:var(--acm)}
+.sbtn{background:none;border:.5px solid var(--brd);border-radius:50%;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:20px}
+.sbtn:hover{background:var(--bg2)}
+.step-box{background:var(--bg);border:.5px solid var(--brd);border-radius:var(--radlg);padding:1rem}
+.section{background:var(--bg);border:.5px solid var(--brd);border-radius:var(--radlg);padding:1rem}
+.section-title{font-size:16px;font-weight:500;color:var(--txt);margin-bottom:8px}
+.csv-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+.csv-table th{background:var(--bg2);color:var(--txt2);padding:6px 8px;text-align:left;border:.5px solid var(--brd);font-weight:500;white-space:nowrap}
+.csv-table td{padding:6px 8px;border:.5px solid var(--brd);color:var(--txt);white-space:nowrap}
+.csv-table tr:nth-child(even) td{background:var(--bg2)}
+.code-block{background:var(--bg2);border-radius:var(--rad);padding:.75rem;font-family:monospace;font-size:12px;color:var(--txt);overflow-x:auto;white-space:pre;line-height:1.6;margin-top:6px}
+.step-row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:.5px solid var(--brd)}
+.step-row:last-child{border-bottom:none}
+.step-num{min-width:26px;height:26px;border-radius:50%;background:var(--acl);color:var(--ac);font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;margin-top:1px;flex-shrink:0}
+.step-text{font-size:15px;color:var(--txt);line-height:1.5}
+.step-text span{color:var(--txt2);font-size:13px;display:block;margin-top:2px}
+.warn-box{background:var(--warnbg);border-radius:var(--rad);padding:.75rem;display:flex;gap:8px;align-items:flex-start}
+.warn-box i{color:var(--warn);font-size:18px;margin-top:1px}
+.warn-box p{font-size:15px;color:var(--warn);line-height:1.5}
+.upload-zone{border:1.5px dashed var(--brd2);border-radius:var(--radlg);padding:1.5rem;text-align:center;cursor:pointer;background:var(--bg2)}
+.upload-zone:hover{background:var(--acl);border-color:var(--acm)}
+.upload-zone .uzi{font-size:30px;color:var(--acm);display:block;margin-bottom:8px}
+.upload-zone p{font-size:15px;color:var(--txt2)}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);font-size:13px;padding:8px 18px;border-radius:99px;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.toast.show{opacity:1}
+.loading-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.35);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-overlay.show{display:flex}
+.loading-box{background:var(--bg);border-radius:var(--radlg);padding:1.5rem 2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.spinner{width:32px;height:32px;border:3px solid var(--acl);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.conn-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.conn-dot.ok{background:#3B6D11}
+.conn-dot.err{background:#A32D2D}
+.conn-dot.loading{background:#BA7517;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.api-url-box{background:var(--bg2);border-radius:var(--rad);padding:.75rem;font-size:12px;color:var(--txt2);word-break:break-all;border:.5px solid var(--brd)}
+.lookup-wrap{position:relative}
+.lookup-new{display:none;margin-top:6px;gap:6px}
+.lookup-new.show{display:flex}
+.lookup-new input{flex:1}
+.lookup-new .btn{width:auto;padding:8px 12px;font-size:14px;flex-shrink:0}
+.search-card{background:var(--bg);border:.5px solid var(--brd);border-radius:var(--radlg);padding:1rem;margin-bottom:10px}
+.search-card-header{display:flex;align-items:center;gap:8px;padding-bottom:8px;margin-bottom:4px;border-bottom:.5px solid var(--brd)}
+.search-card-word{font-size:20px;font-weight:500;color:var(--txt);flex:1}
+.search-card-type{font-size:12px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.search-card-type.noun{background:#E6F1FB;color:#185FA5}
+.search-card-type.verb{background:#FAEEDA;color:#854F0B}
+.search-card-type.adj,.search-card-type.pron{background:#EAF3DE;color:#3B6D11}
+.search-row{display:flex;padding:6px 0;border-bottom:.5px solid var(--brd);gap:8px}
+.search-row:last-child{border-bottom:none}
+.search-row-lbl{font-size:13px;color:var(--txt2);min-width:120px;flex-shrink:0}
+.search-row-val{font-size:14px;color:var(--txt);flex:1;word-break:break-word}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="toast" class="toast"></div>
+<div id="loading" class="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div style="font-size:13px;color:var(--txt2)" id="loading-msg">Yükleniyor...</div>
+  </div>
+</div>
+
+<!-- ANA MENÜ -->
+<div id="s-home" class="scr active">
+  <div class="topbar">
+    <i class="ti ti-school" style="font-size:22px;color:var(--acm)"></i>
+    <h1>Deutsch Lernapp</h1>
+    <button class="btn sm" onclick="go('s-search')" style="padding:6px 14px;font-size:20px" title="Ara"><i class="ti ti-search"></i></button>
+    <button class="btn sm" onclick="go('s-add')" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:6px 14px;font-size:20px;font-weight:300" title="Kelime ekle"><i class="ti ti-plus"></i></button>
+    <span style="font-size:12px;cursor:pointer;margin-left:4px" onclick="go('s-settings')"><span class="conn-dot loading" id="conn-dot"></span><span id="conn-lbl" style="color:var(--txt2)">Bağlanıyor</span></span>
+  </div>
+  <div class="grid2">
+    <div class="sbox"><div class="sv" id="st-total">0</div><div class="sl">Toplam kelime</div></div>
+    <div class="sbox"><div class="sv" id="st-score">-%</div><div class="sl">Başarı oranı</div></div>
+  </div>
+  <button class="btn" onclick="go('s-list')" style="font-size:15px"><i class="ti ti-list"></i> Tüm kelimeler</button>
+  <div style="font-size:15px;font-weight:500;color:var(--txt2)">Flashcard</div>
+  <div class="grid3">
+    <button class="ncard" onclick="startFlash('noun')"><i class="ti ti-cards" style="color:#185FA5"></i><div class="nt">Nomen</div></button>
+    <button class="ncard" onclick="startFlash('verb')"><i class="ti ti-cards" style="color:#854F0B"></i><div class="nt">Verben</div></button>
+    <button class="ncard" onclick="startFlash('adj')"><i class="ti ti-cards" style="color:#3B6D11"></i><div class="nt">Adjektiv</div></button>
+  </div>
+  <div style="font-size:15px;font-weight:500;color:var(--txt2)">Seçmeli test</div>
+  <div class="grid3">
+    <button class="ncard" onclick="pickMulti('noun')"><i class="ti ti-writing" style="color:#185FA5"></i><div class="nt">Nomen</div></button>
+    <button class="ncard" onclick="pickMulti('verb')"><i class="ti ti-writing" style="color:#854F0B"></i><div class="nt">Verben</div></button>
+    <button class="ncard" onclick="pickMulti('adj')"><i class="ti ti-writing" style="color:#3B6D11"></i><div class="nt">Adjektiv</div></button>
+  </div>
+  <div style="font-size:15px;font-weight:500;color:var(--txt2)">Yazılı test</div>
+  <div class="grid3">
+    <button class="ncard" onclick="startWrite('noun')"><i class="ti ti-keyboard" style="color:#185FA5"></i><div class="nt">Nomen</div></button>
+    <button class="ncard" onclick="startWrite('verb')"><i class="ti ti-keyboard" style="color:#854F0B"></i><div class="nt">Verben</div></button>
+    <button class="ncard" onclick="startWrite('adj')"><i class="ti ti-keyboard" style="color:#3B6D11"></i><div class="nt">Adjektiv</div></button>
+  </div>
+  <div class="grid2">
+    <button class="btn" onclick="syncData()" style="font-size:15px"><i class="ti ti-refresh"></i> Yenile</button>
+    <button class="btn" onclick="go('s-settings')" style="font-size:15px"><i class="ti ti-settings"></i> Ayarlar</button>
+  </div>
+</div>
+
+<!-- AYARLAR -->
+<div id="s-settings" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Ayarlar</h1>
+  </div>
+  <div class="section">
+    <div class="section-title"><i class="ti ti-brand-google" style="color:#3B6D11;font-size:15px;vertical-align:-2px;margin-right:6px"></i>Google Apps Script URL</div>
+    <p style="font-size:15px;color:var(--txt2);margin-bottom:8px;line-height:1.5">Farklı bir URL kullanmak istersen buradan değiştirebilirsin.</p>
+    <textarea id="api-url-input" style="font-size:12px;min-height:80px;word-break:break-all"></textarea>
+    <div style="height:8px"></div>
+    <button class="btn pri" onclick="saveApiUrl()"><i class="ti ti-device-floppy"></i> Kaydet</button>
+  </div>
+  <div class="section">
+    <div class="section-title">Bağlantı durumu</div>
+    <div style="font-size:15px;color:var(--txt2)"><span class="conn-dot loading" id="conn-dot2"></span><span id="conn-lbl2">Bağlanıyor...</span></div>
+    <div style="height:8px"></div>
+    <button class="btn" onclick="syncData()"><i class="ti ti-refresh"></i> Bağlantıyı test et</button>
+  </div>
+  <button class="btn" onclick="go('s-csv')"><i class="ti ti-upload"></i> CSV yükle</button>
+  <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV rehberi</button>
+</div>
+
+<!-- CSV YÜKLE -->
+<div id="s-csv" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>CSV yükle</h1>
+  </div>
+  <div class="warn-box"><i class="ti ti-info-circle"></i><p>Excel'den <strong>CSV UTF-8</strong> olarak kaydet. Ayraç ; veya , olabilir. Mevcut kelimeler korunur.</p></div>
+  <div class="section">
+    <div class="section-title" style="color:#185FA5"><i class="ti ti-file-upload" style="margin-right:6px;font-size:15px;vertical-align:-2px"></i>Nomen</div>
+    <div class="upload-zone" onclick="triggerFile('csv-noun')" id="uz-noun">
+      <i class="ti ti-upload uzi"></i>
+      <p><strong>Dosya seç veya buraya tıkla</strong></p>
+      <p style="margin-top:4px">tekil (der Hund) ; cogul ; turkce ; seviye ; bolum</p>
+    </div>
+    <input type="file" id="csv-noun" accept=".csv" class="hidden" onchange="loadCSV(this,'noun')">
+  </div>
+  <div class="section">
+    <div class="section-title" style="color:#854F0B"><i class="ti ti-file-upload" style="margin-right:6px;font-size:15px;vertical-align:-2px"></i>Verben</div>
+    <div class="upload-zone" onclick="triggerFile('csv-verb')" id="uz-verb">
+      <i class="ti ti-upload uzi"></i>
+      <p><strong>Dosya seç veya buraya tıkla</strong></p>
+      <p style="margin-top:4px">mastar ; turkce ; ich ; du ; er ; ...</p>
+    </div>
+    <input type="file" id="csv-verb" accept=".csv" class="hidden" onchange="loadCSV(this,'verb')">
+  </div>
+  <div class="section">
+    <div class="section-title" style="color:#3B6D11"><i class="ti ti-file-upload" style="margin-right:6px;font-size:15px;vertical-align:-2px"></i>Adjektiv</div>
+    <div class="upload-zone" onclick="triggerFile('csv-adj')" id="uz-adj">
+      <i class="ti ti-upload uzi"></i>
+      <p><strong>Dosya seç veya buraya tıkla</strong></p>
+      <p style="margin-top:4px">tur ; kelime ; turkce ; ekbilgi ; seviye ; bolum</p>
+    </div>
+    <input type="file" id="csv-adj" accept=".csv" class="hidden" onchange="loadCSV(this,'adj')">
+  </div>
+</div>
+
+<!-- KELİME EKLE -->
+<div id="s-add" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Kelime ekle</h1>
+  </div>
+  <div class="gtabs">
+    <button class="gtab n active" onclick="setGrp('noun',this)">Nomen</button>
+    <button class="gtab v" onclick="setGrp('verb',this)">Verben</button>
+    <button class="gtab a" onclick="setGrp('adj',this)">Adjektiv</button>
+  </div>
+  <div id="f-noun">
+    <span class="lbl">Tekil (Artikel + İsim)</span><input type="text" id="n-w" placeholder="z.B. der Hund / die Katze / das Kind">
+    <span class="lbl">Çoğul (Artikel + İsim)</span><input type="text" id="n-pl" placeholder="z.B. die Hunde">
+    <span class="lbl">Türkçe anlamı</span><input type="text" id="n-tr" placeholder="z.B. köpek">
+    <div class="grid2" style="margin-top:8px">
+      <div>
+        <span class="lbl">Seviye</span>
+        <div class="lookup-wrap">
+          <select id="n-lv" onchange="onLookupChange('n-lv','n-lv-new')"></select>
+          <div class="lookup-new" id="n-lv-new">
+            <input type="text" id="n-lv-inp" placeholder="Yeni seviye...">
+            <button class="btn pri" onclick="addLookupVal('n-lv','n-lv-new','n-lv-inp','level')">Ekle</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Bölüm</span>
+        <div class="lookup-wrap">
+          <select id="n-ch" onchange="onLookupChange('n-ch','n-ch-new')"></select>
+          <div class="lookup-new" id="n-ch-new">
+            <input type="text" id="n-ch-inp" placeholder="Yeni bölüm...">
+            <button class="btn pri" onclick="addLookupVal('n-ch','n-ch-new','n-ch-inp','chapter')">Ekle</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="f-verb" class="hidden">
+    <span class="lbl">Mastar (Infinitiv)</span><input type="text" id="v-w" placeholder="z.B. gehen">
+    <span class="lbl">Türkçe anlamı</span><input type="text" id="v-tr" placeholder="z.B. gitmek">
+    <span class="lbl" style="font-weight:500;margin-top:10px">Präsens çekimi</span>
+    <div class="conj-grid" style="margin-top:4px">
+      <div class="conj-cell"><span class="clbl">ich</span><input type="text" id="v-p1" placeholder="gehe"></div>
+      <div class="conj-cell"><span class="clbl">du</span><input type="text" id="v-p2" placeholder="gehst"></div>
+      <div class="conj-cell"><span class="clbl">er/sie/es</span><input type="text" id="v-p3" placeholder="geht"></div>
+      <div class="conj-cell"><span class="clbl">wir</span><input type="text" id="v-p4" placeholder="gehen"></div>
+      <div class="conj-cell"><span class="clbl">ihr</span><input type="text" id="v-p5" placeholder="geht"></div>
+      <div class="conj-cell"><span class="clbl">sie/Sie</span><input type="text" id="v-p6" placeholder="gehen"></div>
+    </div>
+    <span class="lbl" style="font-weight:500;margin-top:10px">Diğer zamanlar</span>
+    <span class="lbl">Perfekt</span><input type="text" id="v-pf" placeholder="z.B. bin gegangen">
+    <span class="lbl">Präteritum (ich)</span><input type="text" id="v-pt" placeholder="z.B. ging">
+    <span class="lbl">Futur I (ich)</span><input type="text" id="v-f1" placeholder="z.B. werde gehen">
+    <span class="lbl">Futur II (ich)</span><input type="text" id="v-f2" placeholder="z.B. werde gegangen sein">
+    <span class="lbl">Plusquamperfekt (ich)</span><input type="text" id="v-pq" placeholder="z.B. war gegangen">
+    <div class="grid2" style="margin-top:8px">
+      <div>
+        <span class="lbl">Seviye</span>
+        <div class="lookup-wrap">
+          <select id="v-lv" onchange="onLookupChange('v-lv','v-lv-new')"></select>
+          <div class="lookup-new" id="v-lv-new">
+            <input type="text" id="v-lv-inp" placeholder="Yeni seviye...">
+            <button class="btn pri" onclick="addLookupVal('v-lv','v-lv-new','v-lv-inp','level')">Ekle</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Bölüm</span>
+        <div class="lookup-wrap">
+          <select id="v-ch" onchange="onLookupChange('v-ch','v-ch-new')"></select>
+          <div class="lookup-new" id="v-ch-new">
+            <input type="text" id="v-ch-inp" placeholder="Yeni bölüm...">
+            <button class="btn pri" onclick="addLookupVal('v-ch','v-ch-new','v-ch-inp','chapter')">Ekle</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="f-adj" class="hidden">
+    <span class="lbl">Tür</span><select id="a-type"><option value="adj">Adjektiv</option><option value="pron">Pronomen</option></select>
+    <span class="lbl">Almanca kelime</span><input type="text" id="a-w" placeholder="z.B. groß">
+    <span class="lbl">Türkçe anlamı</span><input type="text" id="a-tr" placeholder="z.B. büyük">
+    <span class="lbl">Ek bilgi (karşılaştırma vb.)</span><textarea id="a-ex" placeholder="z.B. größer / am größten"></textarea>
+    <div class="grid2" style="margin-top:8px">
+      <div>
+        <span class="lbl">Seviye</span>
+        <div class="lookup-wrap">
+          <select id="a-lv" onchange="onLookupChange('a-lv','a-lv-new')"></select>
+          <div class="lookup-new" id="a-lv-new">
+            <input type="text" id="a-lv-inp" placeholder="Yeni seviye...">
+            <button class="btn pri" onclick="addLookupVal('a-lv','a-lv-new','a-lv-inp','level')">Ekle</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Bölüm</span>
+        <div class="lookup-wrap">
+          <select id="a-ch" onchange="onLookupChange('a-ch','a-ch-new')"></select>
+          <div class="lookup-new" id="a-ch-new">
+            <input type="text" id="a-ch-inp" placeholder="Yeni bölüm...">
+            <button class="btn pri" onclick="addLookupVal('a-ch','a-ch-new','a-ch-inp','chapter')">Ekle</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="brow">
+    <button class="btn" onclick="aiFill()" id="ai-fill-btn"><i class="ti ti-sparkles"></i> AI ile doldur</button>
+    <button class="btn pri" onclick="saveWord()"><i class="ti ti-device-floppy"></i> Kaydet</button>
+  </div>
+  <div id="ai-status" class="hidden" style="font-size:13px;color:var(--txt2);text-align:center;padding:6px 0"></div>
+</div>
+
+<!-- FLASHCARD SETUP -->
+<div id="s-fsetup" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="fs-title">Flashcard</h1>
+  </div>
+  <div class="step-box">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px"><i class="ti ti-filter" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Filtre</div>
+    <div class="grid2">
+      <div><span class="lbl">Seviye</span><select id="ff-level" onchange="updateFChapters()"><option value="">Tümü</option><option>A1.1</option><option>A1.2</option><option>A2.1</option><option>A2.2</option><option>B1.1</option><option>B1.2</option></select></div>
+      <div><span class="lbl">Bölüm</span><select id="ff-chapter"><option value="">Tümü</option></select></div>
+    </div>
+    <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="ff-count"></div>
+  </div>
+  <button class="btn pri" onclick="beginFlash()"><i class="ti ti-player-play"></i> Başlat</button>
+</div>
+
+<!-- FLASHCARD -->
+<div id="s-flash" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="fl-title">Flashcard</h1>
+    <span class="badge" id="fl-ctr">1/10</span>
+  </div>
+  <div class="progbar"><div class="progfill" id="fl-prog" style="width:0%"></div></div>
+  <div style="background:var(--bg);border:.5px solid var(--brd);border-radius:var(--radlg);padding:1.4rem 1rem;text-align:center;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;position:relative" onclick="flipFlash()">
+    <span style="position:absolute;top:10px;right:10px;font-size:11px;background:var(--acl);color:var(--ac);padding:2px 8px;border-radius:99px" id="fl-tag"></span>
+    <div id="fl-front">
+      <div style="font-size:30px;font-weight:500" id="fl-art"></div>
+      <div style="font-size:24px;font-weight:500;color:var(--txt)" id="fl-w"></div>
+      <div style="font-size:13px;color:var(--txt2)" id="fl-hint"></div>
+    </div>
+    <div id="fl-back" class="hidden" style="text-align:center">
+      <div style="font-size:18px;font-weight:500;color:var(--ac)" id="fl-tr"></div>
+      <div style="font-size:13px;color:var(--txt2);margin-top:6px;white-space:pre-line" id="fl-ex"></div>
+    </div>
+    <button class="sbtn" onclick="event.stopPropagation();speak(flWord)" style="position:absolute;bottom:10px;right:10px" title="Telaffuzu dinle"><i class="ti ti-volume"></i></button>
+  </div>
+  <div class="brow" id="fl-rate" style="display:none">
+    <button class="btn" style="border-color:var(--danger);color:var(--danger)" onclick="rateFlash(false)"><i class="ti ti-x"></i> Bilmedim</button>
+    <button class="btn" style="border-color:var(--success);color:var(--success)" onclick="rateFlash(true)"><i class="ti ti-check"></i> Bildim</button>
+  </div>
+  <button class="btn" id="fl-flip" onclick="flipFlash()">Çevir</button>
+</div>
+
+<!-- SEÇMELİ SETUP -->
+<div id="s-msetup" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="ms-title">Seçmeli test</h1>
+  </div>
+  <div class="step-box">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px"><i class="ti ti-filter" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Filtre</div>
+    <div class="grid2">
+      <div><span class="lbl">Seviye</span><select id="mf-level" onchange="updateMChapters()"><option value="">Tümü</option><option>A1.1</option><option>A1.2</option><option>A2.1</option><option>A2.2</option><option>B1.1</option><option>B1.2</option></select></div>
+      <div><span class="lbl">Bölüm</span><select id="mf-chapter"><option value="">Tümü</option></select></div>
+    </div>
+    <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="mf-count"></div>
+  </div>
+  <div id="ms-noun" class="step-box hidden">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px">Soru yönü</div>
+    <div class="brow">
+      <button class="btn" id="ms-de-tr" onclick="setMDir('de-tr')">Almanca → Türkçe</button>
+      <button class="btn" id="ms-tr-de" onclick="setMDir('tr-de')">Türkçe → Almanca</button>
+    </div>
+  </div>
+  <div id="ms-verb" class="step-box hidden">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:8px">Zaman seç</div>
+    <div class="tense-sel" id="ts-multi"></div>
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin:12px 0 8px" id="pron-label-multi">Şahıs seç</div>
+    <div class="pron-sel" id="ps-multi"></div>
+  </div>
+  <div id="ms-adj" class="step-box hidden">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px">Soru yönü</div>
+    <div class="brow">
+      <button class="btn" id="ms-adj-dt" onclick="setMDir('de-tr')">Almanca → Türkçe</button>
+      <button class="btn" id="ms-adj-td" onclick="setMDir('tr-de')">Türkçe → Almanca</button>
+    </div>
+  </div>
+  <button class="btn pri" onclick="beginMulti()"><i class="ti ti-player-play"></i> Testi başlat</button>
+</div>
+
+<!-- SEÇMELİ TEST -->
+<div id="s-multi" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="mt-title">Seçmeli test</h1>
+    <span class="badge" id="mt-ctr">1/10</span>
+  </div>
+  <div class="progbar"><div class="progfill" id="mt-prog" style="width:0%"></div></div>
+  <div class="qbox">
+    <div class="qlbl" id="mt-qlbl"></div>
+    <div class="qword" id="mt-q"></div>
+    <div class="qhint" id="mt-hint"></div>
+    <button class="sbtn" onclick="speak(mtSpk)" style="margin:8px auto 0" title="Dinle"><i class="ti ti-volume"></i></button>
+  </div>
+  <div id="mt-opts"></div>
+  <div class="fbrow hidden" id="mt-fb"></div>
+  <button class="btn pri hidden" id="mt-next" onclick="nextMulti()">Sonraki <i class="ti ti-arrow-right"></i></button>
+</div>
+
+<!-- YAZILI SETUP -->
+<div id="s-wsetup" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="ws-title">Yazılı test</h1>
+  </div>
+  <div class="step-box">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px"><i class="ti ti-filter" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Filtre</div>
+    <div class="grid2">
+      <div><span class="lbl">Seviye</span><select id="wf-level" onchange="updateWChapters()"><option value="">Tümü</option><option>A1.1</option><option>A1.2</option><option>A2.1</option><option>A2.2</option><option>B1.1</option><option>B1.2</option></select></div>
+      <div><span class="lbl">Bölüm</span><select id="wf-chapter"><option value="">Tümü</option></select></div>
+    </div>
+    <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="wf-count"></div>
+  </div>
+  <div id="ws-verb" class="step-box hidden">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:8px">Zaman seç</div>
+    <div class="tense-sel" id="ts-write"></div>
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin:12px 0 8px" id="pron-label-write">Şahıs seç</div>
+    <div class="pron-sel" id="ps-write"></div>
+  </div>
+  <div id="ws-noun" class="step-box hidden">
+    <div style="font-size:13px;color:var(--txt2)">Her isim için <strong style="color:var(--txt)">2 adım</strong>: tekil (artikel + isim) → çoğul.</div>
+  </div>
+  <div id="ws-adj" class="step-box hidden">
+    <div style="font-size:13px;color:var(--txt2)">Türkçe verilir, Almancasını yazarsın.</div>
+  </div>
+  <button class="btn pri" onclick="alert('wProns:'+JSON.stringify(wProns)+'\nwTense:'+wTense);beginWrite()"><i class="ti ti-player-play"></i> Testi başlat</button>
+</div>
+
+<!-- YAZILI TEST -->
+<div id="s-write" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="wt-title">Yazılı test</h1>
+    <span class="badge" id="wt-ctr">1/10</span>
+  </div>
+  <div class="progbar"><div class="progfill" id="wt-prog" style="width:0%"></div></div>
+  <div class="qbox">
+    <div class="qlbl" id="wt-qlbl"></div>
+    <div class="qword" id="wt-q"></div>
+    <div class="qhint" id="wt-hint"></div>
+  </div>
+  <div id="wt-lbar" class="lbar"></div>
+  <div style="font-size:11px;color:var(--txt2);text-align:right" id="wt-lpct"></div>
+  <input type="text" class="winp" id="wt-inp" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Yaz...">
+  <div class="wbadge" id="wt-warn">Büyük/küçük harf farkı — doğru kabul edildi</div>
+  <div class="ubar">
+    <button class="ubtn" onclick="ins('ä')">ä</button><button class="ubtn" onclick="ins('ö')">ö</button><button class="ubtn" onclick="ins('ü')">ü</button><button class="ubtn" onclick="ins('Ä')">Ä</button><button class="ubtn" onclick="ins('Ö')">Ö</button><button class="ubtn" onclick="ins('Ü')">Ü</button><button class="ubtn" onclick="ins('ß')">ß</button>
+  </div>
+  <div class="brow">
+    <button class="btn" onclick="skipWrite()">Geç</button>
+    <button class="btn pri" id="wt-check" onclick="checkWrite()"><i class="ti ti-check"></i> Kontrol</button>
+  </div>
+  <div class="fbrow hidden" id="wt-fb"></div>
+  <button class="btn pri hidden" id="wt-next" onclick="nextWrite()">Sonraki <i class="ti ti-arrow-right"></i></button>
+</div>
+
+<!-- SONUÇ -->
+<div id="s-result" class="scr">
+  <div class="topbar"><h1>Sonuç</h1></div>
+  <div style="text-align:center;padding:1rem 0">
+    <div style="font-size:46px;font-weight:500;color:var(--ac)" id="res-pct"></div>
+    <div style="font-size:14px;color:var(--txt2);margin-top:4px" id="res-sub"></div>
+  </div>
+  <div style="background:var(--bg2);border-radius:var(--rad);padding:.75rem">
+    <div style="font-size:13px;font-weight:500;color:var(--txt2);margin-bottom:6px">Yanlış cevaplar</div>
+    <div id="res-wrong"></div>
+  </div>
+  <div class="brow">
+    <button class="btn" onclick="go('s-home')">Ana menü</button>
+    <button class="btn pri" id="res-retry">Tekrar</button>
+  </div>
+</div>
+
+<!-- KELİME LİSTESİ -->
+<div id="s-list" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Kelimeler</h1>
+  </div>
+  <div class="gtabs" id="list-gtabs">
+    <button class="gtab n active" onclick="setListGrp('noun',this)">Nomen</button>
+    <button class="gtab v" onclick="setListGrp('verb',this)">Verben</button>
+    <button class="gtab a" onclick="setListGrp('adj',this)">Adjektiv</button>
+  </div>
+  <select id="lf-lv" onchange="renderList()"><option value="">Tüm seviyeler</option><option>A1.1</option><option>A1.2</option><option>A2.1</option><option>A2.2</option><option>B1.1</option><option>B1.2</option></select>
+  <div id="wlist"></div>
+  <div id="list-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:2rem;font-size:14px">Bu grupta kelime yok.</div>
+</div>
+
+<!-- ARAMA -->
+<div id="s-search" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Arama</h1>
+  </div>
+  <div style="position:relative">
+    <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--txt2);font-size:18px;pointer-events:none"></i>
+    <input type="text" id="search-inp" placeholder="Almanca veya Türkçe ara..." autocomplete="off" autocorrect="off" spellcheck="false" style="padding-left:40px" oninput="doSearch()">
+  </div>
+  <div id="search-results"></div>
+  <div id="search-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:2rem;font-size:15px">Sonuç bulunamadı.</div>
+  <div id="search-hint" style="text-align:center;color:var(--txt2);padding:2rem;font-size:15px">Aramak istediğin kelimeyi yaz...</div>
+</div>
+
+<!-- KELİME LİSTESİ -->
+<div id="s-help" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>CSV yükleme rehberi</h1>
+  </div>
+  <div class="section">
+    <div class="section-title"><i class="ti ti-file-spreadsheet" style="font-size:15px;vertical-align:-2px;margin-right:6px;color:#3B6D11"></i>Excel'den CSV kaydetme</div>
+    <div class="step-row"><div class="step-num">1</div><div class="step-text">İlk satır sütun başlıkları olmalı<span>Aşağıdaki tablolardaki adları aynen kullan</span></div></div>
+    <div class="step-row"><div class="step-num">2</div><div class="step-text">Dosya → Farklı Kaydet</div></div>
+    <div class="step-row"><div class="step-num">3</div><div class="step-text"><strong>CSV UTF-8 (virgülle ayrılmış)</strong> seç<span>ä ö ü ß harflerini korur</span></div></div>
+    <div class="step-row"><div class="step-num">4</div><div class="step-text">Ana menü → CSV yükle → ilgili grubu seç</div></div>
+  </div>
+  <div class="warn-box"><i class="ti ti-alert-triangle"></i><p>Ayraç <strong>noktalı virgül (;)</strong> kullanılır. İngilizce Excel kullanıyorsan virgül (,) de kabul edilir.</p></div>
+  <div class="gtabs" id="help-tabs">
+    <button class="gtab n active" onclick="setHelpTab('noun',this)">Nomen</button>
+    <button class="gtab v" onclick="setHelpTab('verb',this)">Verben</button>
+    <button class="gtab a" onclick="setHelpTab('adj',this)">Adjektiv</button>
+  </div>
+  <div id="ht-noun">
+    <div class="section"><div class="section-title">Sütunlar — nomen.csv</div>
+    <div style="overflow-x:auto"><table class="csv-table">
+      <tr><th>Sütun</th><th>Açıklama</th><th>Zorunlu?</th></tr>
+      <tr><td>tekil</td><td>Artikel + isim (der Hund)</td><td>Evet</td></tr>
+      <tr><td>cogul</td><td>Artikel + çoğul (die Hunde)</td><td>Hayır</td></tr>
+      <tr><td>turkce</td><td>Türkçe anlam</td><td>Evet</td></tr>
+      <tr><td>seviye</td><td>A1.1 … B1.2</td><td>Evet</td></tr>
+      <tr><td>bolum</td><td>Bölüm numarası</td><td>Hayır</td></tr>
+    </table></div>
+    <div class="code-block">tekil;cogul;turkce;seviye;bolum
+der Hund;die Hunde;köpek;A1.1;3
+die Katze;die Katzen;kedi;A1.1;3
+das Kind;die Kinder;çocuk;A1.2;4</div></div>
+  </div>
+  <div id="ht-verb" class="hidden">
+    <div class="section"><div class="section-title">Sütunlar — verben.csv</div>
+    <div style="overflow-x:auto"><table class="csv-table">
+      <tr><th>Sütun</th><th>Açıklama</th><th>Zorunlu?</th></tr>
+      <tr><td>mastar</td><td>Infinitiv</td><td>Evet</td></tr>
+      <tr><td>turkce</td><td>Türkçe anlam</td><td>Evet</td></tr>
+      <tr><td>ich/du/er/wir/ihr/sie</td><td>Präsens çekimleri</td><td>Hayır</td></tr>
+      <tr><td>perfekt</td><td>bin gegangen vb.</td><td>Hayır</td></tr>
+      <tr><td>praeteritum</td><td>ich formu</td><td>Hayır</td></tr>
+      <tr><td>futur1 / futur2</td><td>ich formu</td><td>Hayır</td></tr>
+      <tr><td>plusquamperfekt</td><td>ich formu</td><td>Hayır</td></tr>
+      <tr><td>seviye</td><td>A1.1 … B1.2</td><td>Evet</td></tr>
+    </table></div>
+    <div class="code-block">mastar;turkce;ich;du;er;wir;ihr;sie;perfekt;praeteritum;futur1;futur2;plusquamperfekt;seviye;bolum
+gehen;gitmek;gehe;gehst;geht;gehen;geht;gehen;bin gegangen;ging;werde gehen;werde gegangen sein;war gegangen;A1.1;2</div></div>
+  </div>
+  <div id="ht-adj" class="hidden">
+    <div class="section"><div class="section-title">Sütunlar — adjektiv.csv</div>
+    <div style="overflow-x:auto"><table class="csv-table">
+      <tr><th>Sütun</th><th>Açıklama</th><th>Zorunlu?</th></tr>
+      <tr><td>tur</td><td>adj veya pron</td><td>Evet</td></tr>
+      <tr><td>kelime</td><td>Almanca kelime</td><td>Evet</td></tr>
+      <tr><td>turkce</td><td>Türkçe anlam</td><td>Evet</td></tr>
+      <tr><td>ekbilgi</td><td>Karşılaştırma / çekim</td><td>Hayır</td></tr>
+      <tr><td>seviye</td><td>A1.1 … B1.2</td><td>Evet</td></tr>
+    </table></div>
+    <div class="code-block">tur;kelime;turkce;ekbilgi;seviye;bolum
+adj;groß;büyük;größer / am größten;A1.1;1
+pron;ich;ben;;A1.1;1</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Genel notlar</div>
+    <div style="font-size:13px;color:var(--txt2);line-height:2">
+      İlk satır başlık satırı olmalı<br>
+      Artikel küçük harf: <code style="background:var(--bg2);padding:1px 5px;border-radius:4px">der</code> <code style="background:var(--bg2);padding:1px 5px;border-radius:4px">die</code> <code style="background:var(--bg2);padding:1px 5px;border-radius:4px">das</code><br>
+      Boş sütun: iki noktalı virgül yan yana <code style="background:var(--bg2);padding:1px 5px;border-radius:4px">gehen;gitmek;;;;</code><br>
+      Seviye değerleri: A1.1 · A1.2 · A2.1 · A2.2 · B1.1 · B1.2
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const DEFAULT_API = 'https://script.google.com/macros/s/AKfycbyg50esa5gaO7gxy5zyOtwAEALuWKbJTxWIq7-QZ4i0lsDML3pse7rWTwu0m4xqJUjy/exec';
+const PRONOUNS=[{id:'ich',lbl:'ich'},{id:'du',lbl:'du'},{id:'er',lbl:'er/sie/es'},{id:'wir',lbl:'wir'},{id:'ihr',lbl:'ihr'},{id:'sie',lbl:'sie/Sie'}];
+const TENSES=[{id:'mastar',lbl:'Mastar'},{id:'praesens',lbl:'Präsens'},{id:'perfekt',lbl:'Perfekt'},{id:'praeteritum',lbl:'Präteritum'},{id:'futur1',lbl:'Futur I'},{id:'futur2',lbl:'Futur II'},{id:'plusquam',lbl:'Plusquamperf.'}];
+
+let words=[], addGrp='noun', listGrp='noun';
+let flDeck=[],flIdx=0,flFlipped=false,flWord='';
+let mGrp='',mDir='de-tr',mTense='praesens',mPron='ich',mDeck=[],mIdx=0,mCorr=0,mWrong=[],mtSpk='';
+let wGrp='',wTense='praesens',wPron='ich',wDeck=[],wIdx=0,wStep=0,wCorr=0,wWrong=[],wAnswered=false;
+
+function getApi(){return localStorage.getItem('deutsch_api')||DEFAULT_API;}
+function saveApiUrl(){const v=document.getElementById('api-url-input').value.trim();if(!v){alert('URL boş olamaz');return;}localStorage.setItem('deutsch_api',v);toast('URL kaydedildi');syncData();}
+
+function showLoading(msg){document.getElementById('loading').classList.add('show');document.getElementById('loading-msg').textContent=msg||'Yükleniyor...';}
+function hideLoading(){document.getElementById('loading').classList.remove('show');}
+function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=msg;t.style.background=ok?'#3B6D11':'#A32D2D';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+function setConn(state){
+  ['conn-dot','conn-dot2'].forEach(id=>{const d=document.getElementById(id);if(d){d.className='conn-dot '+(state==='ok'?'ok':state==='err'?'err':'loading');}});
+  ['conn-lbl','conn-lbl2'].forEach(id=>{const l=document.getElementById(id);if(l)l.textContent=state==='ok'?'Bağlı':state==='err'?'Bağlantı yok':'Bağlanıyor';});
+}
+
+async function apiCall(params){
+  const url=getApi()+'?'+new URLSearchParams(params).toString();
+  const res=await fetch(url);
+  const data=await res.json();
+  if(data.error)throw new Error(data.error);
+  return data;
+}
+
+async function syncData(){
+  setConn('loading');showLoading('Google Sheets\'ten yükleniyor...');
+  try{
+    const data=await apiCall({action:'getAll'});
+    const adjs=(data.adjs||[]).map(w=>{
+      const t=String(w.type||'').toLowerCase().trim();
+      w.type=(t==='pron'||t==='pronomen')?'pron':'adj';
+      return w;
+    });
+    words=[...(data.nouns||[]),...(data.verbs||[]),...adjs];
+    setConn('ok');updateHome();toast(words.length+' kelime yüklendi');
+  }catch(e){setConn('err');toast('Bağlantı hatası: '+e.message,false);}
+  hideLoading();
+}
+
+function go(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='s-home')updateHome();
+  if(id==='s-add')fillAddLookups();
+  if(id==='s-search'){document.getElementById('search-inp').value='';doSearch();setTimeout(()=>document.getElementById('search-inp').focus(),100);}
+  if(id==='s-list'){fillLevels('lf-lv',grpPool(listGrp));renderList();}
+  if(id==='s-settings'){document.getElementById('api-url-input').value=getApi();}
+}
+
+function updateHome(){
+  const t=words.length;const c=words.reduce((s,w)=>s+w.correct,0);const a=words.reduce((s,w)=>s+w.correct+w.wrong,0);
+  document.getElementById('st-total').textContent=t;
+  document.getElementById('st-score').textContent=a>0?Math.round(c/a*100)+'%':'-%';
+}
+
+function getLookupVal(selId){const s=document.getElementById(selId);return s.value==='__new__'?'':s.value;}
+function onLookupChange(selId,newId){const s=document.getElementById(selId);document.getElementById(newId).classList.toggle('show',s.value==='__new__');}
+function addLookupVal(selId,newId,inpId,type){
+  const inp=document.getElementById(inpId);const val=inp.value.trim();if(!val)return;
+  const sel=document.getElementById(selId);
+  // Tüm lookup select'lere aynı tipte yeni değer ekle
+  const targets=type==='level'?['n-lv','v-lv','a-lv']:['n-ch','v-ch','a-ch'];
+  targets.forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const exists=[...s.options].some(o=>o.value===val);
+    if(!exists){const o=document.createElement('option');o.value=val;o.textContent=val;s.insertBefore(o,s.querySelector('option[value="__new__"]'));}
+    s.value=val;
+    const nid=id.replace('-lv','-lv-new').replace('-ch','-ch-new');
+    const nd=document.getElementById(nid);if(nd)nd.classList.remove('show');
+  });
+  inp.value='';
+}
+function setGrp(g,el){addGrp=g;document.querySelectorAll('#s-add .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');['noun','verb','adj'].forEach(k=>document.getElementById('f-'+k).classList.toggle('hidden',k!==g));}
+function fillAddLookups(){
+  const levels=[...new Set(words.map(w=>w.level).filter(l=>l))].sort();
+  const chapters=[...new Set(words.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});
+  ['n-lv','v-lv','a-lv'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const cur=s.value;
+    s.innerHTML=levels.map(l=>'<option value="'+l+'">'+l+'</option>').join('')+'<option value="__new__" style="color:var(--ac);font-style:italic">+ Yeni giriş</option>';
+    if(levels.includes(cur))s.value=cur;else if(levels.length)s.value=levels[0];
+  });
+  ['n-ch','v-ch','a-ch'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const cur=s.value;
+    s.innerHTML=chapters.map(c=>'<option value="'+c+'">'+c+'</option>').join('')+'<option value="__new__" style="color:var(--ac);font-style:italic">+ Yeni giriş</option>';
+    if(chapters.map(String).includes(String(cur)))s.value=cur;else if(chapters.length)s.value=chapters[0];
+  });
+}
+
+async function updateStats(word){try{await apiCall({action:'update',word:JSON.stringify(word)});}catch(e){}}
+
+async function saveWord(){
+  let w={correct:0,wrong:0,streak:0};
+  if(addGrp==='noun'){const wd=document.getElementById('n-w').value.trim();if(!wd){alert('Kelime giriniz');return;}Object.assign(w,{type:'noun',word:wd,plural:document.getElementById('n-pl').value.trim(),tr:document.getElementById('n-tr').value.trim(),level:getLookupVal('n-lv'),chapter:getLookupVal('n-ch')});}
+  else if(addGrp==='verb'){const wd=document.getElementById('v-w').value.trim();if(!wd){alert('Fiil giriniz');return;}Object.assign(w,{type:'verb',word:wd,tr:document.getElementById('v-tr').value.trim(),praesens:{ich:document.getElementById('v-p1').value.trim(),du:document.getElementById('v-p2').value.trim(),er:document.getElementById('v-p3').value.trim(),wir:document.getElementById('v-p4').value.trim(),ihr:document.getElementById('v-p5').value.trim(),sie:document.getElementById('v-p6').value.trim()},perfekt:document.getElementById('v-pf').value.trim(),praeteritum:document.getElementById('v-pt').value.trim(),futur1:document.getElementById('v-f1').value.trim(),futur2:document.getElementById('v-f2').value.trim(),plusquam:document.getElementById('v-pq').value.trim(),level:getLookupVal('v-lv'),chapter:getLookupVal('v-ch')});}
+  else{const wd=document.getElementById('a-w').value.trim();if(!wd){alert('Kelime giriniz');return;}Object.assign(w,{type:document.getElementById('a-type').value,word:wd,tr:document.getElementById('a-tr').value.trim(),extra:document.getElementById('a-ex').value.trim(),level:getLookupVal('a-lv'),chapter:getLookupVal('a-ch')});}
+  showLoading('Kaydediliyor...');
+  try{
+    const res=await apiCall({action:'save',word:JSON.stringify(w)});
+    w.id=w.type[0]+'_new_'+Date.now();w.rowIndex=res.rowIndex;words.push(w);updateHome();
+    ['n-w','n-pl','n-tr','n-ch','v-w','v-tr','v-p1','v-p2','v-p3','v-p4','v-p5','v-p6','v-pf','v-pt','v-f1','v-f2','v-pq','v-ch','a-w','a-tr','a-ex','a-ch'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    toast('Kaydedildi!');
+  }catch(e){toast('Kayıt hatası: '+e.message,false);}
+  hideLoading();
+}
+
+async function aiFill(){
+  let keyword='';
+  if(addGrp==='noun') keyword=document.getElementById('n-w').value.trim()||document.getElementById('n-tr').value.trim();
+  else if(addGrp==='verb') keyword=document.getElementById('v-w').value.trim()||document.getElementById('v-tr').value.trim();
+  else keyword=document.getElementById('a-w').value.trim()||document.getElementById('a-tr').value.trim();
+
+  if(!keyword){alert('Önce Almanca veya Türkçe kelimeyi girin');return;}
+
+  const btn=document.getElementById('ai-fill-btn');
+  const status=document.getElementById('ai-status');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Dolduruluyor...';
+  status.classList.remove('hidden');status.textContent='Claude bilgileri arıyor...';
+  status.style.color='var(--txt2)';
+
+  try{
+    const res=await apiCall({action:'aiComplete',grp:addGrp,keyword});
+    if(res.error)throw new Error(res.error);
+    const parsed=res.data;
+
+    if(addGrp==='noun'){
+      if(parsed.tekil)document.getElementById('n-w').value=parsed.tekil;
+      if(parsed.cogul!==undefined)document.getElementById('n-pl').value=parsed.cogul;
+      if(parsed.turkce)document.getElementById('n-tr').value=parsed.turkce;
+    } else if(addGrp==='verb'){
+      if(parsed.mastar)document.getElementById('v-w').value=parsed.mastar;
+      if(parsed.turkce)document.getElementById('v-tr').value=parsed.turkce;
+      if(parsed.ich)document.getElementById('v-p1').value=parsed.ich;
+      if(parsed.du)document.getElementById('v-p2').value=parsed.du;
+      if(parsed.er)document.getElementById('v-p3').value=parsed.er;
+      if(parsed.wir)document.getElementById('v-p4').value=parsed.wir;
+      if(parsed.ihr)document.getElementById('v-p5').value=parsed.ihr;
+      if(parsed.sie)document.getElementById('v-p6').value=parsed.sie;
+      if(parsed.perfekt)document.getElementById('v-pf').value=parsed.perfekt;
+      if(parsed.praeteritum)document.getElementById('v-pt').value=parsed.praeteritum;
+      if(parsed.futur1)document.getElementById('v-f1').value=parsed.futur1;
+      if(parsed.futur2)document.getElementById('v-f2').value=parsed.futur2;
+      if(parsed.plusquamperfekt)document.getElementById('v-pq').value=parsed.plusquamperfekt;
+    } else {
+      if(parsed.kelime)document.getElementById('a-w').value=parsed.kelime;
+      if(parsed.turkce)document.getElementById('a-tr').value=parsed.turkce;
+      if(parsed.ekbilgi)document.getElementById('a-ex').value=parsed.ekbilgi;
+      if(parsed.tur){document.getElementById('a-type').value=parsed.tur==='pron'?'pron':'adj';}
+    }
+    status.textContent='✓ Bilgiler dolduruldu — kontrol edip kaydedin';
+    status.style.color='var(--success)';
+  }catch(e){
+    status.textContent='Hata: '+e.message;
+    status.style.color='var(--danger)';
+  }
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-sparkles"></i> AI ile doldur';
+}
+
+function triggerFile(id){document.getElementById(id).click();}
+function loadCSV(input,grp){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const text=e.target.result;const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+      if(lines.length<2){toast('Dosya boş veya başlık satırı eksik',false);return;}
+      const sep=lines[0].includes(';')?';':',';const headers=lines[0].split(sep).map(h=>h.trim().toLowerCase());
+      const rows=[];
+      for(let i=1;i<lines.length;i++){
+        const vals=lines[i].split(sep).map(v=>v.trim());const row={};headers.forEach((h,j)=>row[h]=vals[j]||'');
+        let r=[];
+        if(grp==='noun'){if(!row.tekil||!row.turkce||!row.seviye)continue;r=[row.tekil,row.cogul||'',row.turkce,row.seviye,row.bolum||'',0,0,0];}
+        else if(grp==='verb'){if(!row.mastar||!row.turkce||!row.seviye)continue;r=[row.mastar,row.turkce,row.ich||'',row.du||'',row.er||'',row.wir||'',row.ihr||'',row.sie||'',row.perfekt||'',row.praeteritum||'',row.futur1||'',row.futur2||'',row.plusquamperfekt||'',row.seviye,row.bolum||'',0,0,0];}
+        else{if(!row.tur||!row.kelime||!row.turkce||!row.seviye)continue;r=[row.tur,row.kelime,row.turkce,row.ekbilgi||'',row.seviye,row.bolum||'',0,0,0];}
+        rows.push(r);
+      }
+      if(!rows.length){toast('Geçerli satır bulunamadı',false);return;}
+      showLoading('Sheets\'e yükleniyor...');
+      const res=await apiCall({action:'importCSV',type:grp,rows:JSON.stringify(rows)});
+      hideLoading();
+      const uzId={'noun':'uz-noun','verb':'uz-verb','adj':'uz-adj'}[grp];
+      document.getElementById(uzId).innerHTML='<i class="ti ti-circle-check uzi" style="color:#3B6D11"></i><p><strong>'+res.added+' kelime eklendi</strong></p><p style="margin-top:4px">'+file.name+'</p>';
+      toast(res.added+' kelime eklendi');await syncData();
+    }catch(err){hideLoading();toast('Hata: '+err.message,false);}
+  };
+  reader.readAsText(file,'UTF-8');input.value='';
+}
+
+function grpPool(grp){return words.filter(w=>grp==='noun'?w.type==='noun':grp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron'));}
+function applyFilter(pool,level,chapter){let r=pool;if(level)r=r.filter(w=>w.level===level);if(chapter)r=r.filter(w=>String(w.chapter)===String(chapter));return r;}
+function fillLevels(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const levels=[...new Set(pool.map(w=>w.level).filter(l=>l))].sort();sel.innerHTML='<option value="">Tümü</option>'+levels.map(l=>'<option value="'+l+'">'+l+'</option>').join('');if(levels.includes(cur))sel.value=cur;else sel.value='';}
+function fillChapters(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const chapters=[...new Set(pool.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});sel.innerHTML='<option value="">Tümü</option>'+chapters.map(c=>'<option value="'+c+'">'+c+'</option>').join('');if(chapters.map(String).includes(String(cur)))sel.value=cur;else sel.value='';}
+function updateMChapters(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('mf-chapter',filtered);updateMCount();}
+function updateMCount(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const ch=document.getElementById('mf-chapter').value;const n=applyFilter(pool,lv,ch).length;document.getElementById('mf-count').textContent=n+' kelime bu filtreyle eşleşiyor';}
+function updateWChapters(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('wf-chapter',filtered);updateWCount();}
+function updateWCount(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const ch=document.getElementById('wf-chapter').value;const n=applyFilter(pool,lv,ch).length;document.getElementById('wf-count').textContent=n+' kelime bu filtreyle eşleşiyor';}
+function weighted(grp,level,chapter,max){
+  const pool=applyFilter(grpPool(grp),level,chapter);
+  if(!pool.length)return[];
+  const deck=[];pool.forEach(w=>{const wt=w.streak>=3?1:w.wrong>0?Math.max(3,w.wrong*2):2;for(let i=0;i<wt;i++)deck.push(w);});
+  return deck.sort(()=>Math.random()-.5).slice(0,Math.min(max||10,deck.length));
+}
+
+let flGrp='';
+function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen kartları':grp==='verb'?'Verben kartları':'Adjektiv kartları';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Tümü</option>';updateFChapters();go('s-fsetup');}
+function updateFChapters(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('ff-chapter',filtered);updateFCount();}
+function updateFCount(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const n=applyFilter(pool,lv,ch).length;document.getElementById('ff-count').textContent=n+' kelime bu filtreyle eşleşiyor';}
+function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const d=weighted(flGrp,lv,ch,10);if(!d.length){alert('Bu filtreyle eşleşen kelime yok!');return;}flDeck=d;flIdx=0;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen kartları':flGrp==='verb'?'Verben kartları':'Adjektiv kartları';go('s-flash');showFlash();}
+function showFlash(){
+  const w=flDeck[flIdx];flFlipped=false;flWord=w.word;
+  document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;
+  document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';
+  document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · Böl.'+w.chapter:'');
+  document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');
+  document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');
+  const art=document.getElementById('fl-art');
+  art.textContent='';art.style.color='';
+  document.getElementById('fl-w').textContent=w.word;
+  document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Çoğul: '+w.plural:'Çevirmek için dokun';
+  document.getElementById('fl-tr').textContent=w.tr;
+  let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;
+  document.getElementById('fl-ex').textContent=ex;
+}
+function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');}
+function rateFlash(ok){const w=flDeck[flIdx];const o=words.find(x=>x.id===w.id);if(o){if(ok){o.correct++;o.streak++;}else{o.wrong++;o.streak=0;}updateStats(o);}flIdx++;if(flIdx>=flDeck.length){updateHome();go('s-fsetup');toast('Kart desti tamamlandı!');}else showFlash();}
+
+function buildTenses(cid,forWrite){
+  const c=document.getElementById(cid);c.innerHTML='';
+  const cur=forWrite?wTense:mTense;
+  TENSES.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='tense-btn'+(t.id===cur?' active':'');
+    b.textContent=t.lbl;
+    b.onclick=()=>{
+      document.querySelectorAll('#'+cid+' .tense-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      if(forWrite){wTense=t.id;}
+      else{mTense=t.id;}
+      // Şahıs bölümünü güncelle
+      const lblId=forWrite?'pron-label-write':'pron-label-multi';
+      const selId=forWrite?'ps-write':'ps-multi';
+      const isMastar=t.id==='mastar';
+      const lbl=document.getElementById(lblId);
+      const sel=document.getElementById(selId);
+      if(lbl)lbl.style.opacity=isMastar?'0.4':'1';
+      if(sel){buildProns(selId,forWrite);}
+    };
+    c.appendChild(b);
+  });
+}
+let wProns=['ich']; // yazılı test için çoklu şahıs
+function buildProns(cid,forWrite){
+  const c=document.getElementById(cid);c.innerHTML='';
+  const isDisabled=forWrite?(wTense==='mastar'):(mTense==='mastar');
+  PRONOUNS.forEach(p=>{
+    const b=document.createElement('button');
+    if(forWrite){
+      // Çoklu seçim
+      const active=wProns.includes(p.id);
+      b.className='pron-btn'+(active?' active':'')+(isDisabled?' disabled':'');
+      b.disabled=isDisabled;
+      b.style.opacity=isDisabled?'0.4':'1';
+      b.textContent=p.lbl;
+      b.onclick=()=>{
+        if(isDisabled)return;
+        if(wProns.includes(p.id)){
+          if(wProns.length>1)wProns=wProns.filter(x=>x!==p.id);
+        }else{wProns.push(p.id);}
+        buildProns(cid,true);
+      };
+    } else {
+      // Tekli seçim
+      b.className='pron-btn'+(p.id===mPron?' active':'')+(isDisabled?' disabled':'');
+      b.disabled=isDisabled;
+      b.style.opacity=isDisabled?'0.4':'1';
+      b.textContent=p.lbl;
+      b.onclick=()=>{if(isDisabled)return;document.querySelectorAll('#'+cid+' .pron-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');mPron=p.id;};
+    }
+    c.appendChild(b);
+  });
+}
+function pickMulti(grp){mGrp=grp;mTense='mastar';mPron='ich';document.getElementById('ms-title').textContent=grp==='noun'?'Nomen seçmeli':grp==='verb'?'Verben seçmeli':'Adjektiv seçmeli';['ms-noun','ms-verb','ms-adj'].forEach(id=>document.getElementById(id).classList.add('hidden'));if(grp==='noun'){document.getElementById('ms-noun').classList.remove('hidden');setMDir('de-tr');}else if(grp==='verb'){document.getElementById('ms-verb').classList.remove('hidden');buildTenses('ts-multi',false);buildProns('ps-multi',false);}else{document.getElementById('ms-adj').classList.remove('hidden');setMDir('de-tr');}fillLevels('mf-level',grpPool(grp));document.getElementById('mf-chapter').innerHTML='<option value="">Tümü</option>';updateMChapters();go('s-msetup');}
+function setMDir(d){mDir=d;['ms-de-tr','ms-tr-de','ms-adj-dt','ms-adj-td'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('pri');});const ak=d==='de-tr'?(mGrp==='adj'?'ms-adj-dt':'ms-de-tr'):(mGrp==='adj'?'ms-adj-td':'ms-tr-de');const el=document.getElementById(ak);if(el)el.classList.add('pri');}
+function beginMulti(){
+  const lv=document.getElementById('mf-level').value;
+  const ch=document.getElementById('mf-chapter').value;
+  const d=weighted(mGrp,lv,ch,10);if(!d.length){alert('Bu filtreyle eşleşen kelime yok!');return;}
+  let deck=d;if(mGrp==='verb'){if(mTense==='mastar'){deck=d;}else if(mTense==='praesens'){deck=d.filter(w=>w.praesens&&w.praesens[mPron]);}else{deck=d.filter(w=>w[mTense]);}if(!deck.length){alert('Seçilen zaman için veri yok!');return;}}
+  mDeck=deck;mIdx=0;mCorr=0;mWrong=[];
+  document.getElementById('mt-title').textContent=mGrp==='noun'?'Nomen seçmeli':mGrp==='verb'?'Verben seçmeli':'Adjektiv seçmeli';
+  go('s-multi');showMulti();
+}
+function showMulti(){
+  const w=mDeck[mIdx];
+  document.getElementById('mt-ctr').textContent=(mIdx+1)+'/'+mDeck.length;
+  document.getElementById('mt-prog').style.width=(mIdx/mDeck.length*100)+'%';
+  document.getElementById('mt-fb').classList.add('hidden');document.getElementById('mt-next').classList.add('hidden');
+  let q='',qlbl='';
+  if(mGrp==='verb'){const tl=TENSES.find(t=>t.id===mTense).lbl;if(mTense==='mastar'){qlbl='Mastar (Infinitiv) formu nedir?';}else{const pl=PRONOUNS.find(p=>p.id===mPron).lbl;qlbl=tl+' — '+pl+' formu nedir?';}q=w.word;mtSpk=w.word;}
+  else if(mGrp==='noun'){if(mDir==='de-tr'){q=w.word;qlbl='Türkçesi nedir?';mtSpk=w.word;}else{q=w.tr;qlbl='Almancası nedir?';mtSpk=w.word;}}
+  else{if(mDir==='de-tr'){q=w.word;qlbl='Türkçesi nedir?';mtSpk=w.word;}else{q=w.tr;qlbl='Almancası nedir?';mtSpk=w.word;}}
+  document.getElementById('mt-q').textContent=q;document.getElementById('mt-qlbl').textContent=qlbl;document.getElementById('mt-hint').textContent='';
+  const others=grpPool(mGrp).filter(x=>x.id!==w.id).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=[w,...others].sort(()=>Math.random()-.5);
+  const el=document.getElementById('mt-opts');el.innerHTML='';
+  opts.forEach(o=>{
+    let lbl='';
+    if(mGrp==='verb'){if(mTense==='mastar')lbl=o.word;else lbl=mTense==='praesens'?(o.praesens&&o.praesens[mPron]?o.praesens[mPron]:o.word):o[mTense]||o.word;}
+    else if(mGrp==='noun'){lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}
+    else{lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}
+    const btn=document.createElement('button');btn.className='opt';btn.textContent=lbl;btn.onclick=()=>answerMulti(btn,o.id===w.id,w);el.appendChild(btn);
+  });
+}
+function answerMulti(btn,correct,w){
+  document.querySelectorAll('#mt-opts .opt').forEach(b=>b.disabled=true);
+  let cl='';
+  if(mGrp==='verb'){if(mTense==='mastar')cl=w.word;else cl=mTense==='praesens'?(w.praesens&&w.praesens[mPron]?w.praesens[mPron]:w.word):w[mTense]||w.word;}
+  else if(mGrp==='noun'){cl=mDir==='de-tr'?(w.tr||w.word):w.word;}
+  else{cl=mDir==='de-tr'?(w.tr||w.word):w.word;}
+  if(correct){btn.classList.add('ok');mCorr++;const o=words.find(x=>x.id===w.id);if(o){o.correct++;o.streak++;updateStats(o);}}
+  else{btn.classList.add('no');document.querySelectorAll('#mt-opts .opt').forEach(b=>{if(b.textContent===cl)b.classList.add('ok');});mWrong.push(w);const o=words.find(x=>x.id===w.id);if(o){o.wrong++;o.streak=0;updateStats(o);}document.getElementById('mt-fb').innerHTML='<span class="no">Doğrusu: '+cl+'</span>';document.getElementById('mt-fb').classList.remove('hidden');}
+  document.getElementById('mt-next').classList.remove('hidden');
+}
+function nextMulti(){mIdx++;if(mIdx>=mDeck.length)showResult(mCorr,mDeck.length,mWrong,()=>beginMulti());else showMulti();}
+
+function startWrite(grp){wGrp=grp;wTense='praesens';wPron='ich';wProns=['ich','du','er','wir','ihr','sie'];document.getElementById('ws-title').textContent=grp==='noun'?'Nomen yazılı':grp==='verb'?'Verben yazılı':'Adjektiv yazılı';['ws-verb','ws-noun','ws-adj'].forEach(id=>document.getElementById(id).classList.add('hidden'));if(grp==='verb'){document.getElementById('ws-verb').classList.remove('hidden');buildTenses('ts-write',true);buildProns('ps-write',true);}else if(grp==='noun'){document.getElementById('ws-noun').classList.remove('hidden');}else{document.getElementById('ws-adj').classList.remove('hidden');}fillLevels('wf-level',grpPool(grp));document.getElementById('wf-chapter').innerHTML='<option value="">Tümü</option>';updateWChapters();go('s-wsetup');}
+function beginWrite(){
+  const lv=document.getElementById('wf-level').value;
+  const ch=document.getElementById('wf-chapter').value;
+
+  // Önce unique kelime havuzu al
+  const pool=applyFilter(grpPool(wGrp),lv,ch);
+  if(!pool.length){alert('Bu filtreyle eşleşen kelime yok!');return;}
+
+  if(wGrp==='verb'&&wTense==='praesens'){
+    // Her kelime × her seçili şahıs kombinasyonunu oluştur
+    const pairs=[];
+    pool.forEach(w=>{
+      wProns.forEach(p=>{
+        if(w.praesens&&w.praesens[p])pairs.push({...w,_pron:p});
+      });
+    });
+    if(!pairs.length){alert('Seçilen şahıslar için veri yok!');return;}
+    // Ağırlıklı karıştır
+    const weighted=[];
+    pairs.forEach(w=>{const wt=w.streak>=3?1:w.wrong>0?Math.max(3,w.wrong*2):2;for(let i=0;i<wt;i++)weighted.push(w);});
+    wDeck=weighted.sort(()=>Math.random()-.5).slice(0,Math.min(30,weighted.length));
+  } else if(wGrp==='verb'&&wTense==='mastar'){
+    const weighted=[];
+    pool.forEach(w=>{const wt=w.streak>=3?1:w.wrong>0?Math.max(3,w.wrong*2):2;for(let i=0;i<wt;i++)weighted.push(w);});
+    wDeck=weighted.sort(()=>Math.random()-.5).slice(0,10);
+  } else if(wGrp==='verb'){
+    const filtered=pool.filter(w=>w[wTense]);
+    if(!filtered.length){alert('Seçilen zaman için veri yok!');return;}
+    const weighted=[];
+    filtered.forEach(w=>{const wt=w.streak>=3?1:w.wrong>0?Math.max(3,w.wrong*2):2;for(let i=0;i<wt;i++)weighted.push(w);});
+    wDeck=weighted.sort(()=>Math.random()-.5).slice(0,10);
+  } else {
+    const weighted=[];
+    pool.forEach(w=>{const wt=w.streak>=3?1:w.wrong>0?Math.max(3,w.wrong*2):2;for(let i=0;i<wt;i++)weighted.push(w);});
+    wDeck=weighted.sort(()=>Math.random()-.5).slice(0,10);
+  }
+
+  wIdx=0;wStep=0;wCorr=0;wWrong=[];
+  document.getElementById('wt-title').textContent=wGrp==='noun'?'Nomen yazılı':wGrp==='verb'?'Verben yazılı':'Adjektiv yazılı';
+  go('s-write');showWrite();
+}
+function nounSteps(w){return[{exp:w.word,hint:'Tekil yaz (artikel + isim)'},{exp:w.plural?w.plural:'Yok',hint:'Çoğul yaz — çoğulu yoksa \'Yok\' yaz'}];}
+function getExp(w){if(wGrp==='noun'){const steps=nounSteps(w);return steps[wStep]?steps[wStep].exp:'';}if(wGrp==='verb'){if(wTense==='mastar')return w.word;if(wTense==='praesens'){const p=w._pron||wProns[0]||wPron;return w.praesens&&w.praesens[p]?w.praesens[p]:'';}return w[wTense]||'';}return w.word||'';}
+function getQ(w){if(wGrp==='noun'){const steps=nounSteps(w);const s=steps[wStep]||steps[0];return{q:w.tr,hint:s.hint};}if(wGrp==='verb'){if(wTense==='mastar')return{q:w.tr,hint:'Mastar (Infinitiv) formu'};const tl=TENSES.find(t=>t.id===wTense).lbl;if(wTense==='praesens'){const p=w._pron||wProns[0]||wPron;const pl=PRONOUNS.find(x=>x.id===p);return{q:w.tr,hint:tl+' — '+(pl?pl.lbl:p)+' formu'};}const pl=PRONOUNS.find(p=>p.id===wPron);return{q:w.tr,hint:tl+' — '+(pl?pl.lbl:wPron)+' formu'};}return{q:w.tr,hint:'Almancasını yaz'};}
+function showWrite(){
+  const w=wDeck[wIdx];wAnswered=false;
+  const total=wGrp==='noun'?wDeck.length*2:wDeck.length;const curr=wGrp==='noun'?wIdx*2+wStep:wIdx;
+  document.getElementById('wt-ctr').textContent=(curr+1)+'/'+total;
+  document.getElementById('wt-prog').style.width=(curr/total*100)+'%';
+  const inp=document.getElementById('wt-inp');inp.value='';inp.className='winp';inp.disabled=false;
+  document.getElementById('wt-fb').classList.add('hidden');document.getElementById('wt-next').classList.add('hidden');document.getElementById('wt-check').classList.remove('hidden');document.getElementById('wt-warn').classList.remove('show');
+  const exp=getExp(w);resetLBar(exp.length||1);
+  const{q,hint}=getQ(w);
+  document.getElementById('wt-q').textContent=q;document.getElementById('wt-qlbl').textContent='';document.getElementById('wt-hint').textContent=hint;
+  inp.oninput=()=>updateLBar(inp.value,getExp(wDeck[wIdx]));
+  inp.onkeydown=e=>{if(e.key==='Enter'&&!wAnswered)checkWrite();};
+}
+function resetLBar(len){const b=document.getElementById('wt-lbar');b.innerHTML='';document.getElementById('wt-lpct').textContent='';for(let i=0;i<Math.max(len,1);i++){const s=document.createElement('div');s.className='lseg';b.appendChild(s);}}
+function updateLBar(typed,exp){const b=document.getElementById('wt-lbar');const len=exp.length;while(b.children.length<len){const s=document.createElement('div');s.className='lseg';b.appendChild(s);}while(b.children.length>len)b.removeChild(b.lastChild);const segs=b.querySelectorAll('.lseg');const tl=typed.toLowerCase(),el=exp.toLowerCase();let cor=0;for(let i=0;i<len;i++){const s=segs[i];if(i>=typed.length)s.className='lseg';else if(tl[i]===el[i]){s.className='lseg ok';cor++;}else s.className='lseg no';}document.getElementById('wt-lpct').textContent=typed.length>0?Math.round(cor/len*100)+'% doğru':'';}
+function checkWrite(){
+  if(wAnswered)return;const w=wDeck[wIdx];const typed=document.getElementById('wt-inp').value.trim();const exp=getExp(w);
+  if(!exp){advWrite();return;}
+  wAnswered=true;updateLBar(typed,exp);
+  const exact=typed===exp,caseOnly=typed.toLowerCase()===exp.toLowerCase()&&!exact,correct=exact||caseOnly;
+  const inp=document.getElementById('wt-inp');inp.disabled=true;document.getElementById('wt-check').classList.add('hidden');document.getElementById('wt-next').classList.remove('hidden');
+  if(caseOnly)document.getElementById('wt-warn').classList.add('show');
+  const fb=document.getElementById('wt-fb');fb.classList.remove('hidden');
+  if(correct){inp.className='winp ok';wCorr++;const o=words.find(x=>x.id===w.id);if(o){o.correct++;o.streak++;updateStats(o);}fb.innerHTML='<span class="ok"><i class="ti ti-check"></i> Doğru!</span>';speak(exp);}
+  else{inp.className='winp no';wWrong.push(w);const o=words.find(x=>x.id===w.id);if(o){o.wrong++;o.streak=0;updateStats(o);}fb.innerHTML='<span class="no"><i class="ti ti-x"></i> Yanlış</span><span style="font-size:13px;color:var(--txt2)">Doğrusu: <strong style="color:var(--txt)">'+exp+'</strong></span>';speak(exp);}
+}
+function skipWrite(){if(wAnswered)return;const w=wDeck[wIdx];wWrong.push(w);const o=words.find(x=>x.id===w.id);if(o){o.wrong++;o.streak=0;updateStats(o);}advWrite();}
+function nextWrite(){advWrite();}
+function advWrite(){if(wGrp==='noun'){const steps=nounSteps(wDeck[wIdx]);if(wStep<steps.length-1){wStep++;showWrite();}else{wStep=0;wIdx++;if(wIdx>=wDeck.length)finWrite();else showWrite();}}else{wIdx++;if(wIdx>=wDeck.length)finWrite();else showWrite();}}
+function finWrite(){const total=wDeck.length;showResult(wCorr,total,[...new Map(wWrong.map(w=>[w.id,w])).values()],()=>beginWrite());}
+
+function showResult(corr,total,wrongArr,retryFn){
+  go('s-result');
+  document.getElementById('res-pct').textContent=Math.round(corr/total*100)+'%';
+  document.getElementById('res-sub').textContent=corr+' / '+total+' doğru';
+  document.getElementById('res-retry').onclick=retryFn;
+  const el=document.getElementById('res-wrong');
+  if(!wrongArr.length){el.innerHTML='<div style="font-size:13px;color:var(--success)">Tüm soruları doğru cevapladın!</div>';}
+  else{el.innerHTML=wrongArr.map(w=>'<div style="font-size:13px;padding:4px 0;border-bottom:.5px solid var(--brd)">'+w.word+' = '+w.tr+'</div>').join('');}
+  updateHome();
+}
+
+function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');fillLevels('lf-lv',grpPool(g));renderList();}
+function renderList(){
+  const lv=document.getElementById('lf-lv').value;
+  const filtered=words.filter(w=>{const ok=listGrp==='noun'?w.type==='noun':listGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron');return ok&&(!lv||w.level===lv);});
+  document.getElementById('list-empty').classList.toggle('hidden',filtered.length>0);
+  document.getElementById('wlist').innerHTML=filtered.map(w=>{
+    const disp=w.word;
+    const sub=w.type==='noun'&&w.plural?'Çoğul: die '+w.plural:w.type==='verb'?'Fiil':w.extra||'';
+    return '<div class="wli"><div class="wli-l"><div class="wli-w">'+disp+'</div><div class="wli-t">'+(w.tr||'')+(sub?' · '+sub:'')+'</div></div><span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac)">'+w.level+'</span><button class="delbtn" onclick="delWord(\''+w.id+'\',\''+w.type+'\')"><i class="ti ti-trash"></i></button></div>';
+  }).join('');
+}
+async function delWord(id,type){
+  if(!confirm('Silinsin mi?'))return;
+  showLoading('Siliniyor...');
+  try{await apiCall({action:'delete',type,id});words=words.filter(w=>w.id!==id);renderList();updateHome();toast('Silindi');}
+  catch(e){toast('Silme hatası: '+e.message,false);}
+  hideLoading();
+}
+
+function doSearch(){
+  const q=document.getElementById('search-inp').value.trim().toLowerCase();
+  const res=document.getElementById('search-results');
+  const empty=document.getElementById('search-empty');
+  const hint=document.getElementById('search-hint');
+  if(!q){res.innerHTML='';empty.classList.add('hidden');hint.classList.remove('hidden');return;}
+  hint.classList.add('hidden');
+  const found=words.filter(w=>(w.word||'').toLowerCase().includes(q)||(w.tr||'').toLowerCase().includes(q));
+  if(!found.length){res.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  res.innerHTML=found.map(w=>buildSearchCard(w)).join('');
+}
+
+function buildSearchCard(w){
+  const typeLabel=w.type==='noun'?'Nomen':w.type==='verb'?'Verb':w.type==='pron'?'Pronomen':'Adjektiv';
+  const typeClass=w.type==='noun'?'noun':w.type==='verb'?'verb':'adj';
+  let rows='';
+  const row=(lbl,val)=>val?'<div class="search-row"><span class="search-row-lbl">'+lbl+'</span><span class="search-row-val">'+val+'</span></div>':'';
+
+  if(w.type==='noun'){
+    rows+=row('Tekil',w.word);
+    rows+=row('Çoğul',w.plural||'—');
+    rows+=row('Türkçe',w.tr);
+    rows+=row('Seviye',w.level);
+    rows+=row('Bölüm',w.chapter);
+  } else if(w.type==='verb'){
+    rows+=row('Mastar',w.word);
+    rows+=row('Türkçe',w.tr);
+    if(w.praesens){
+      rows+=row('Präsens — ich',w.praesens.ich);
+      rows+=row('Präsens — du',w.praesens.du);
+      rows+=row('Präsens — er/sie/es',w.praesens.er);
+      rows+=row('Präsens — wir',w.praesens.wir);
+      rows+=row('Präsens — ihr',w.praesens.ihr);
+      rows+=row('Präsens — sie/Sie',w.praesens.sie);
+    }
+    rows+=row('Perfekt',w.perfekt);
+    rows+=row('Präteritum',w.praeteritum);
+    rows+=row('Futur I',w.futur1);
+    rows+=row('Futur II',w.futur2);
+    rows+=row('Plusquamperfekt',w.plusquam);
+    rows+=row('Seviye',w.level);
+    rows+=row('Bölüm',w.chapter);
+  } else {
+    rows+=row('Kelime',w.word);
+    rows+=row('Türkçe',w.tr);
+    rows+=row('Ek bilgi',w.extra);
+    rows+=row('Seviye',w.level);
+    rows+=row('Bölüm',w.chapter);
+  }
+
+  rows+=row('Doğru',w.correct);
+  rows+=row('Yanlış',w.wrong);
+
+  return '<div class="search-card"><div class="search-card-header"><span class="search-card-word">'+w.word+'</span><span class="search-card-type '+typeClass+'">'+typeLabel+'</span></div>'+rows+'</div>';
+}
+
+function setHelpTab(t,el){document.querySelectorAll('#help-tabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');['noun','verb','adj'].forEach(k=>document.getElementById('ht-'+k).classList.toggle('hidden',k!==t));}
+function ins(ch){const inp=document.getElementById('wt-inp');if(inp.disabled)return;const s=inp.selectionStart,e=inp.selectionEnd,v=inp.value;inp.value=v.slice(0,s)+ch+v.slice(e);inp.selectionStart=inp.selectionEnd=s+1;inp.focus();if(wDeck[wIdx])updateLBar(inp.value,getExp(wDeck[wIdx]));}
+function speak(t){if(!t)return;const u=new SpeechSynthesisUtterance(t);u.lang='de-DE';u.rate=0.85;speechSynthesis.cancel();speechSynthesis.speak(u);}
+
+syncData();
+</script>
+</body>
+</html>
