@@ -925,9 +925,10 @@ function go(id){
 }
 
 function updateHome(){
-  const t=words.length;
-  const c=words.reduce((s,w)=>s+(w.correct||0),0);
-  const a=words.reduce((s,w)=>s+(w.correct||0)+(w.wrong||0),0);
+  const w=window._words||[];
+  const t=w.length;
+  const c=w.reduce((s,x)=>s+(x.correct||0),0);
+  const a=w.reduce((s,x)=>s+(x.correct||0)+(x.wrong||0),0);
   document.getElementById('st-total').textContent=t;
   document.getElementById('st-score').textContent=a>0?Math.round(c/a*100)+'%':'-%';
 }
@@ -994,7 +995,7 @@ function fillLangSelect(){
 fillLangSelect();
 
 // Kelime yardımcıları
-function grpPool(grp){return words.filter(w=>grp==='noun'?w.type==='noun':grp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron'));}
+function grpPool(grp){const w=window._words||[];return w.filter(x=>grp==='noun'?x.type==='noun':grp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron'));}
 function applyFilter(pool,level,chapter){let r=pool;if(level)r=r.filter(w=>w.level===level);if(chapter)r=r.filter(w=>String(w.chapter)===String(chapter));return r;}
 function fillLevels(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const levels=[...new Set(pool.map(w=>w.level).filter(l=>l))].sort();sel.innerHTML='<option value="">Alle</option>'+levels.map(l=>`<option value="${l}">${l}</option>`).join('');if(levels.includes(cur))sel.value=cur;else sel.value='';}
 function fillChapters(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const chapters=[...new Set(pool.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});sel.innerHTML='<option value="">Alle</option>'+chapters.map(c=>`<option value="${c}">${c}</option>`).join('');if(chapters.map(String).includes(String(cur)))sel.value=cur;else sel.value='';}
@@ -1071,10 +1072,16 @@ function showResult(corr,total,wrongArr,retryFn){go('s-result');document.getElem
 
 // KELİME LİSTESİ
 function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');fillLevels('lf-lv',grpPool(g));renderList();}
-function renderList(){const lv=document.getElementById('lf-lv').value;const filtered=words.filter(w=>{const ok=listGrp==='noun'?w.type==='noun':listGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron');return ok&&(!lv||w.level===lv);});document.getElementById('list-empty').classList.toggle('hidden',filtered.length>0);document.getElementById('wlist').innerHTML=filtered.map(w=>'<div class="wli"><div class="wli-l"><div class="wli-w">'+w.word+'</div><div class="wli-t">'+(w.tr||'')+(w.plural?' · Pl: '+w.plural:'')+'</div></div><span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac)">'+w.level+'</span><button class="delbtn" onclick="delWord(\''+w._id+'\',\''+w._col+'\')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>').join('');}
+function renderList(){
+  const w=window._words||[];
+  const lv=document.getElementById('lf-lv').value;
+  const filtered=w.filter(x=>{const ok=listGrp==='noun'?x.type==='noun':listGrp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron');return ok&&(!lv||x.level===lv);});
+  document.getElementById('list-empty').classList.toggle('hidden',filtered.length>0);
+  document.getElementById('wlist').innerHTML=filtered.map(x=>'<div class="wli"><div class="wli-l"><div class="wli-w">'+x.word+'</div><div class="wli-t">'+(x.tr||'')+(x.plural?' · Pl: '+x.plural:'')+'</div></div><span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac)">'+(x.level||'')+'</span><button class="delbtn" onclick="delWord(\''+x._id+'\',\''+x._col+'\')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>').join('');
+}
 
 // ARAMA
-function doSearch(){const q=document.getElementById('search-inp').value.trim().toLowerCase();const res=document.getElementById('search-results');const empty=document.getElementById('search-empty');const hint=document.getElementById('search-hint');if(!q){res.innerHTML='';empty.classList.add('hidden');hint.classList.remove('hidden');return;}hint.classList.add('hidden');const found=words.filter(w=>(w.word||'').toLowerCase().includes(q)||(w.tr||'').toLowerCase().includes(q));if(!found.length){res.innerHTML='';empty.classList.remove('hidden');return;}empty.classList.add('hidden');res.innerHTML=found.map(w=>buildSearchCard(w)).join('');}
+function doSearch(){const q=document.getElementById('search-inp').value.trim().toLowerCase();const res=document.getElementById('search-results');const empty=document.getElementById('search-empty');const hint=document.getElementById('search-hint');if(!q){res.innerHTML='';empty.classList.add('hidden');hint.classList.remove('hidden');return;}hint.classList.add('hidden');const w=window._words||[];const found=w.filter(x=>(x.word||'').toLowerCase().includes(q)||(x.tr||'').toLowerCase().includes(q));if(!found.length){res.innerHTML='';empty.classList.remove('hidden');return;}empty.classList.add('hidden');res.innerHTML=found.map(x=>buildSearchCard(x)).join('');}
 function buildSearchCard(w){const typeLabel=w.type==='noun'?'Nomen':w.type==='verb'?'Verb':w.type==='pron'?'Pronomen':'Adjektiv';const typeClass=w.type==='noun'?'noun':w.type==='verb'?'verb':'adj';let rows='';const row=(lbl,val)=>val?'<div class="search-row"><span class="search-row-lbl">'+lbl+'</span><span class="search-row-val">'+val+'</span></div>':'';if(w.type==='noun'){rows+=row('Singular',w.word);rows+=row('Plural',w.plural||'—');rows+=row('Türkisch',w.tr);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else if(w.type==='verb'){rows+=row('Infinitiv',w.word);rows+=row('Türkisch',w.tr);if(w.praesens){rows+=row('ich',w.praesens.ich);rows+=row('du',w.praesens.du);rows+=row('er/sie/es',w.praesens.er);rows+=row('wir',w.praesens.wir);rows+=row('ihr',w.praesens.ihr);rows+=row('sie/Sie',w.praesens.sie);}rows+=row('Perfekt',w.perfekt);rows+=row('Präteritum',w.praeteritum);rows+=row('Futur I',w.futur1);rows+=row('Futur II',w.futur2);rows+=row('Plusquamperfekt',w.plusquam);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else{rows+=row('Wort',w.word);rows+=row('Türkisch',w.tr);rows+=row('Zusatzinfo',w.extra);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}rows+=row('Benutzer',w.kullanici);return'<div class="search-card"><div class="search-card-header"><span class="search-card-word">'+w.word+'</span><span class="search-card-type '+typeClass+'">'+typeLabel+'</span></div>'+rows+'</div>';}
 
 // SES
