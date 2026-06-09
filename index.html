@@ -48,6 +48,7 @@ const LANGUAGES = [
 let currentUser = null;
 let userProfile = null;
 let words = [];
+window._words = words;
 
 // Auth state listener
 onAuthStateChanged(auth, async (user) => {
@@ -90,7 +91,7 @@ async function loadUserProfile(user) {
 }
 
 async function loadWords() {
-  words = [];
+  window._words = [];
   showLoading('Wörter werden geladen...');
   try {
     const user = window._currentUser || currentUser;
@@ -100,11 +101,11 @@ async function loadWords() {
       const snap = await window._getDocs(col);
       snap.forEach(d => {
         const data = d.data();
-        words.push({...data, _id: d.id, _col: t});
+        window._words.push({...data, _id: d.id, _col: t});
       });
     }
     updateHome();
-    toast(words.length + ' Wörter geladen');
+    toast(window._words.length + ' Wörter geladen');
   } catch(e) {
     toast('Fehler: ' + e.message, false);
   }
@@ -225,7 +226,7 @@ window.saveWord = async function() {
   try {
     const ref = await window._addDoc(window._collection(window._db, 'users', user.uid, colName), w);
     w._id = ref.id; w._col = colName;
-    words.push(w);
+    window._words.push(w);
     updateHome(); fillAddLookups(); clearForm();
     toast('Gespeichert!');
   } catch(e) { toast('Speicherfehler: '+e.message, false); }
@@ -280,7 +281,7 @@ window.loadCSV = function(input, grp) {
         else if(grp==='verb'){if(!row.mastar||!row.turkce||!row.seviye)continue;Object.assign(w,{type:'verb',word:row.mastar,tr:row.turkce,praesens:{ich:row.ich||'',du:row.du||'',er:row.er||'',wir:row.wir||'',ihr:row.ihr||'',sie:row.sie||''},perfekt:row.perfekt||'',praeteritum:row.praeteritum||'',futur1:row.futur1||'',futur2:row.futur2||'',plusquam:row.plusquamperfekt||'',level:row.seviye,chapter:row.bolum||''});}
         else{if(!row.tur||!row.kelime||!row.turkce||!row.seviye)continue;Object.assign(w,{type:row.tur==='pron'?'pron':'adj',word:row.kelime,tr:row.turkce,extra:row.ekbilgi||'',level:row.seviye,chapter:row.bolum||''});}
         const ref=await window._addDoc(window._collection(window._db,'users',user.uid,colName),w);
-        w._id=ref.id;w._col=colName;words.push(w);added++;
+        w._id=ref.id;w._col=colName;window._words.push(w);added++;
       }
       hideLoading();
       const uzId={'noun':'uz-noun','verb':'uz-verb','adj':'uz-adj'}[grp];
@@ -895,6 +896,13 @@ let flDeck=[],flIdx=0,flFlipped=false,flWord='',flGrp='';
 let mGrp='',mDir='de-tr',mTense='mastar',mPron='ich',mDeck=[],mIdx=0,mCorr=0,mWrong=[],mtSpk='';
 let wGrp='',wTense='praesens',wPron='ich',wProns=['ich','du','er','wir','ihr','sie'],wDeck=[],wIdx=0,wStep=0,wCorr=0,wWrong=[],wAnswered=false;
 
+// words dizisini window._words üzerinden al
+window._words = window._words || [];
+Object.defineProperty(window, 'words', {
+  get: () => window._words,
+  set: (v) => { window._words = v; }
+});
+
 function showLoading(msg){document.getElementById('loading').classList.add('show');document.getElementById('loading-msg').textContent=msg||'Laden...';}
 function hideLoading(){document.getElementById('loading').classList.remove('show');}
 function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=msg;t.style.background=ok?'#3B6D11':'#A32D2D';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
@@ -996,7 +1004,16 @@ function setGrp(g,el){addGrp=g;document.querySelectorAll('#s-add .gtabs .gtab').
 function getLookupVal(selId){const s=document.getElementById(selId);return s.value==='__new__'?'':s.value;}
 function onLookupChange(selId,newId){const s=document.getElementById(selId);document.getElementById(newId).classList.toggle('show',s.value==='__new__');}
 function addLookupVal(selId,newId,inpId,type){const inp=document.getElementById(inpId);const val=inp.value.trim();if(!val)return;const targets=type==='level'?['n-lv','v-lv','a-lv']:['n-ch','v-ch','a-ch'];targets.forEach(id=>{const s=document.getElementById(id);if(!s)return;const exists=[...s.options].some(o=>o.value===val);if(!exists){const o=document.createElement('option');o.value=val;o.textContent=val;s.insertBefore(o,s.querySelector('option[value="__new__"]'));}s.value=val;const nid=id.replace('-lv','-lv-new').replace('-ch','-ch-new');const nd=document.getElementById(nid);if(nd)nd.classList.remove('show');});inp.value='';}
-function fillAddLookups(){const levels=[...new Set(words.map(w=>w.level).filter(l=>l))].sort();const chapters=[...new Set(words.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});['n-lv','v-lv','a-lv'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const cur=s.value;s.innerHTML=levels.map(l=>`<option value="${l}">${l}</option>`).join('')+'<option value="__new__" style="color:var(--ac);font-style:italic">+ Neu eingeben</option>';if(levels.includes(cur))s.value=cur;else if(levels.length)s.value=levels[0];});['n-ch','v-ch','a-ch'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const cur=s.value;s.innerHTML=chapters.map(c=>`<option value="${c}">${c}</option>`).join('')+'<option value="__new__" style="color:var(--ac);font-style:italic">+ Neu eingeben</option>';if(chapters.map(String).includes(String(cur)))s.value=cur;else if(chapters.length)s.value=chapters[0];});}
+function fillAddLookups(){
+  const w=words||[];
+  const levels=[...new Set(w.map(x=>x.level).filter(l=>l))].sort();
+  const chapters=[...new Set(w.map(x=>x.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});
+  const newOpt='<option value="__new__" style="color:var(--ac);font-style:italic">+ Neu eingeben</option>';
+  ['n-lv','v-lv','a-lv'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const cur=s.value;s.innerHTML=levels.map(l=>`<option value="${l}">${l}</option>`).join('')+newOpt;if(levels.includes(cur))s.value=cur;else if(levels.length)s.value=levels[0];else s.value='__new__';});
+  ['n-ch','v-ch','a-ch'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const cur=s.value;s.innerHTML=chapters.map(c=>`<option value="${c}">${c}</option>`).join('')+newOpt;if(chapters.map(String).includes(String(cur)))s.value=cur;else if(chapters.length)s.value=chapters[0];else s.value='__new__';});
+  // Yeni giriş kutularını güncelle
+  ['n-lv','v-lv','a-lv','n-ch','v-ch','a-ch'].forEach(id=>{const s=document.getElementById(id);if(s)onLookupChange(id,id.replace('-lv','-lv-new').replace('-ch','-ch-new'));});
+}
 function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p4','v-p5','v-p6','v-pf','v-pt','v-f1','v-f2','v-pq','a-w','a-tr','a-ex'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('ai-status').classList.add('hidden');}
 
 // FLASHCARD
