@@ -896,11 +896,18 @@ let flDeck=[],flIdx=0,flFlipped=false,flWord='',flGrp='';
 let mGrp='',mDir='de-tr',mTense='mastar',mPron='ich',mDeck=[],mIdx=0,mCorr=0,mWrong=[],mtSpk='';
 let wGrp='',wTense='praesens',wPron='ich',wProns=['ich','du','er','wir','ihr','sie'],wDeck=[],wIdx=0,wStep=0,wCorr=0,wWrong=[],wAnswered=false;
 
-// words dizisini window._words üzerinden al
+// words — window._words ile senkronize
 window._words = window._words || [];
+function getWords(){ return window._words || []; }
+// words global erişim için proxy
+var words = new Proxy({}, {
+  get: function(t, p) { return window._words ? window._words[p] : [][p]; }
+});
+// Diziye özgü metodlar için words'ü array olarak kullan
 Object.defineProperty(window, 'words', {
-  get: () => window._words,
-  set: (v) => { window._words = v; }
+  get: function(){ return window._words || []; },
+  set: function(v){ window._words = v; },
+  configurable: true
 });
 
 function showLoading(msg){document.getElementById('loading').classList.add('show');document.getElementById('loading-msg').textContent=msg||'Laden...';}
@@ -1005,14 +1012,26 @@ function getLookupVal(selId){const s=document.getElementById(selId);return s.val
 function onLookupChange(selId,newId){const s=document.getElementById(selId);document.getElementById(newId).classList.toggle('show',s.value==='__new__');}
 function addLookupVal(selId,newId,inpId,type){const inp=document.getElementById(inpId);const val=inp.value.trim();if(!val)return;const targets=type==='level'?['n-lv','v-lv','a-lv']:['n-ch','v-ch','a-ch'];targets.forEach(id=>{const s=document.getElementById(id);if(!s)return;const exists=[...s.options].some(o=>o.value===val);if(!exists){const o=document.createElement('option');o.value=val;o.textContent=val;s.insertBefore(o,s.querySelector('option[value="__new__"]'));}s.value=val;const nid=id.replace('-lv','-lv-new').replace('-ch','-ch-new');const nd=document.getElementById(nid);if(nd)nd.classList.remove('show');});inp.value='';}
 function fillAddLookups(){
-  const w=words||[];
+  const w=window._words||[];
   const levels=[...new Set(w.map(x=>x.level).filter(l=>l))].sort();
   const chapters=[...new Set(w.map(x=>x.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});
   const newOpt='<option value="__new__" style="color:var(--ac);font-style:italic">+ Neu eingeben</option>';
-  ['n-lv','v-lv','a-lv'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const cur=s.value;s.innerHTML=levels.map(l=>`<option value="${l}">${l}</option>`).join('')+newOpt;if(levels.includes(cur))s.value=cur;else if(levels.length)s.value=levels[0];else s.value='__new__';});
-  ['n-ch','v-ch','a-ch'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const cur=s.value;s.innerHTML=chapters.map(c=>`<option value="${c}">${c}</option>`).join('')+newOpt;if(chapters.map(String).includes(String(cur)))s.value=cur;else if(chapters.length)s.value=chapters[0];else s.value='__new__';});
-  // Yeni giriş kutularını güncelle
-  ['n-lv','v-lv','a-lv','n-ch','v-ch','a-ch'].forEach(id=>{const s=document.getElementById(id);if(s)onLookupChange(id,id.replace('-lv','-lv-new').replace('-ch','-ch-new'));});
+  ['n-lv','v-lv','a-lv'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    s.innerHTML=levels.map(l=>`<option value="${l}">${l}</option>`).join('')+newOpt;
+    if(levels.length===0)s.value='__new__';
+    const newId=id+'-new';
+    const nd=document.getElementById(newId);
+    if(nd)nd.classList.toggle('show',s.value==='__new__');
+  });
+  ['n-ch','v-ch','a-ch'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    s.innerHTML=chapters.map(c=>`<option value="${c}">${c}</option>`).join('')+newOpt;
+    if(chapters.length===0)s.value='__new__';
+    const newId=id+'-new';
+    const nd=document.getElementById(newId);
+    if(nd)nd.classList.toggle('show',s.value==='__new__');
+  });
 }
 function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p4','v-p5','v-p6','v-pf','v-pt','v-f1','v-f2','v-pq','a-w','a-tr','a-ex'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('ai-status').classList.add('hidden');}
 
