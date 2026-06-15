@@ -50,6 +50,20 @@ let userProfile = null;
 let words = [];
 window._words = words;
 
+// Azure Functions API
+const AZURE_API = 'https://deutsch-lernapp-api-eseqdhbkbaehftfa.swedencentral-01.azurewebsites.net/api';
+window._AZURE_API = AZURE_API;
+
+async function azureCall(body) {
+  const res = await fetch(AZURE_API + '/words', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  return await res.json();
+}
+window._azureCall = azureCall;
+
 // Auth state listener
 onAuthStateChanged(auth, async (user) => {
   if (user) {
@@ -72,20 +86,15 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadUserProfile(user) {
-  const ref = doc(db, 'users', user.uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    userProfile = snap.data();
-  } else {
-    // Yeni kullanıcı — Profil oluştur
+  const res = await azureCall({ action: 'ensureUser', userId: user.uid, email: user.email });
+  if (res.success) {
     userProfile = {
-      email: user.email,
-      displayName: user.displayName || '',
-      anaAil: '',
-      kullaniciTipi: 1,
-      kayitTarihi: serverTimestamp(),
+      email: res.profile.Email,
+      anaAil: res.profile.AnaDil,
+      kullaniciTipi: res.profile.KullaniciTipi
     };
-    await setDoc(ref, userProfile);
+  } else {
+    userProfile = { email: user.email, anaAil: '', kullaniciTipi: 1 };
   }
   window._userProfile = userProfile;
 }
@@ -95,14 +104,11 @@ async function loadWords() {
   showLoading('Wörter werden geladen...');
   try {
     const user = window._currentUser || currentUser;
-    const types = ['nomen','verben','adjektiv'];
-    for (const t of types) {
-      const col = window._collection(window._db, 'users', user.uid, t);
-      const snap = await window._getDocs(col);
-      snap.forEach(d => {
-        const data = d.data();
-        window._words.push({...data, _id: d.id, _col: t});
-      });
+    const res = await azureCall({ action: 'getAll', userId: user.uid });
+    if (res.success) {
+      window._words = res.words;
+    } else {
+      throw new Error(res.error || 'Unbekannter Fehler');
     }
     updateHome();
     toast(window._words.length + ' Wörter geladen');
@@ -201,8 +207,10 @@ window.saveLang = async function() {
   try {
     const user = window._currentUser;
     if(!user) throw new Error('Nicht angemeldet');
-    await window._updateDoc(window._doc(window._db, 'users', user.uid), { anaAil: lang });
+    const res = await azureCall({ action: 'setUserLang', userId: user.uid, anaAil: lang });
+    if(!res.success) throw new Error(res.error || 'Fehler');
     userProfile.anaAil = lang;
+    window._userProfile.anaAil = lang;
     await loadWords();
     go('s-home');
   } catch(e) {
@@ -214,13 +222,11 @@ window.saveLang = async function() {
 window.saveWord = async function() {
   const user = window._currentUser;
   if (!user) return;
-  let w = { kayitTarihi: window._serverTimestamp(), guncellemeTarihi: window._serverTimestamp(), kullanici: user.email, correct:0, wrong:0, streak:0 };
-  let colName = '';
+  let w = { correct:0, wrong:0, streak:0 };
   if (addGrp==='noun') {
     const wd=document.getElementById('n-w').value.trim();
     if(!wd){toast('Bitte Wort eingeben',false);return;}
     Object.assign(w,{type:'noun',word:wd,plural:document.getElementById('n-pl').value.trim(),tr:document.getElementById('n-tr').value.trim(),level:getLookupVal('n-lv'),chapter:getLookupVal('n-ch')});
-    colName='nomen';
   } else if (addGrp==='verb') {
     const wd=document.getElementById('v-w').value.trim();
     if(!wd){toast('Bitte Verb eingeben',false);return;}
@@ -228,17 +234,16 @@ window.saveWord = async function() {
       praesens:{ich:document.getElementById('v-p1').value.trim(),du:document.getElementById('v-p2').value.trim(),er:document.getElementById('v-p3').value.trim(),wir:document.getElementById('v-p4').value.trim(),ihr:document.getElementById('v-p5').value.trim(),sie:document.getElementById('v-p6').value.trim()},
       perfekt:document.getElementById('v-pf').value.trim(),praeteritum:document.getElementById('v-pt').value.trim(),futur1:document.getElementById('v-f1').value.trim(),futur2:document.getElementById('v-f2').value.trim(),plusquam:document.getElementById('v-pq').value.trim(),
       level:getLookupVal('v-lv'),chapter:getLookupVal('v-ch')});
-    colName='verben';
   } else {
     const wd=document.getElementById('a-w').value.trim();
     if(!wd){toast('Bitte Wort eingeben',false);return;}
     Object.assign(w,{type:document.getElementById('a-type').value,word:wd,tr:document.getElementById('a-tr').value.trim(),extra:document.getElementById('a-ex').value.trim(),level:getLookupVal('a-lv'),chapter:getLookupVal('a-ch')});
-    colName='adjektiv';
   }
   showLoading('Wird gespeichert...');
   try {
-    const ref = await window._addDoc(window._collection(window._db, 'users', user.uid, colName), w);
-    w._id = ref.id; w._col = colName;
+    const res = await azureCall({ action: 'save', userId: user.uid, word: w });
+    if (!res.success) throw new Error(res.error || 'Speicherfehler');
+    w._id = res._id; w._col = res._col;
     window._words.push(w);
     updateHome(); fillAddLookups(); clearForm();
     toast('Gespeichert!');
@@ -251,10 +256,7 @@ window.updateStats = async function(word) {
   const user = window._currentUser;
   if (!user || !word._id || !word._col) return;
   try {
-    await window._updateDoc(window._doc(window._db,'users',user.uid,word._col,word._id), {
-      correct: word.correct, wrong: word.wrong, streak: word.streak,
-      guncellemeTarihi: window._serverTimestamp()
-    });
+    await azureCall({ action: 'update', userId: user.uid, _id: word._id, _col: word._col, correct: word.correct, wrong: word.wrong, streak: word.streak });
   } catch(e) {}
 };
 
@@ -264,7 +266,8 @@ window.delWord = async function(id, col) {
   showLoading('Wird gelöscht...');
   try {
     const user = window._currentUser;
-    await window._deleteDoc(window._doc(window._db,'users',user.uid,col,id));
+    const res = await azureCall({ action: 'delete', userId: user.uid, _id: id, _col: col });
+    if (!res.success) throw new Error(res.error || 'Löschfehler');
     window._words = (window._words||[]).filter(w=>w._id!==id);
     renderList(); updateHome(); toast('Gelöscht');
   } catch(e) { toast('Löschfehler: '+e.message, false); }
@@ -283,23 +286,20 @@ window.loadCSV = function(input, grp) {
       if(lines.length<2){toast('Datei leer oder Kopfzeile fehlt',false);return;}
       const sep=lines[0].includes(';')?';':',';
       const headers=lines[0].split(sep).map(h=>h.trim().toLowerCase());
-      const colName = grp==='noun'?'nomen':grp==='verb'?'verben':'adjektiv';
-      let added=0;
-      showLoading('CSV wird importiert...');
+      const rows=[];
       for(let i=1;i<lines.length;i++){
         const vals=lines[i].split(sep).map(v=>v.trim());
         const row={};headers.forEach((h,j)=>row[h]=vals[j]||'');
-        let w={kayitTarihi:window._serverTimestamp(),guncellemeTarihi:window._serverTimestamp(),kullanici:user.email,correct:0,wrong:0,streak:0};
-        if(grp==='noun'){if(!row.tekil||!row.turkce||!row.seviye)continue;Object.assign(w,{type:'noun',word:row.tekil,plural:row.cogul||'',tr:row.turkce,level:row.seviye,chapter:row.bolum||''});}
-        else if(grp==='verb'){if(!row.mastar||!row.turkce||!row.seviye)continue;Object.assign(w,{type:'verb',word:row.mastar,tr:row.turkce,praesens:{ich:row.ich||'',du:row.du||'',er:row.er||'',wir:row.wir||'',ihr:row.ihr||'',sie:row.sie||''},perfekt:row.perfekt||'',praeteritum:row.praeteritum||'',futur1:row.futur1||'',futur2:row.futur2||'',plusquam:row.plusquamperfekt||'',level:row.seviye,chapter:row.bolum||''});}
-        else{if(!row.tur||!row.kelime||!row.turkce||!row.seviye)continue;Object.assign(w,{type:row.tur==='pron'?'pron':'adj',word:row.kelime,tr:row.turkce,extra:row.ekbilgi||'',level:row.seviye,chapter:row.bolum||''});}
-        const ref=await window._addDoc(window._collection(window._db,'users',user.uid,colName),w);
-        w._id=ref.id;w._col=colName;window._words.push(w);added++;
+        rows.push(row);
       }
+      showLoading('CSV wird importiert...');
+      const res=await azureCall({action:'importCSV',userId:user.uid,grp,rows});
+      if(!res.success)throw new Error(res.error||'Importfehler');
       hideLoading();
       const uzId={'noun':'uz-noun','verb':'uz-verb','adj':'uz-adj'}[grp];
-      document.getElementById(uzId).innerHTML='<i class="ti ti-circle-check uzi" style="color:#3B6D11"></i><p><strong>'+added+' Wörter hinzugefügt</strong></p>';
-      toast(added+' Wörter hinzugefügt');updateHome();
+      document.getElementById(uzId).innerHTML='<i class="ti ti-circle-check uzi" style="color:#3B6D11"></i><p><strong>'+res.added+' Wörter hinzugefügt</strong></p>';
+      toast(res.added+' Wörter hinzugefügt');
+      await loadWords();
     }catch(err){hideLoading();toast('Fehler: '+err.message,false);}
   };
   reader.readAsText(file,'UTF-8');input.value='';
@@ -323,8 +323,8 @@ window.aiFill = async function() {
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Wird ausgefüllt...';
   status.classList.remove('hidden');status.textContent='Claude sucht Informationen...';status.style.color='var(--txt2)';
   try{
-    const API_URL='https://script.google.com/macros/s/AKfycbyoBLwxk8VsOsoQlvp8ZrDxlOD9Hs-6fxFXbyveMCM9Igr9zvFjhF2KmVKoY3h5Z6Zm/exec';
-    const res=await fetch(API_URL+'?action=aiComplete&grp='+addGrp+'&keyword='+encodeURIComponent(keyword)+'&targetLang='+encodeURIComponent(targetLang));
+    const url=window._AZURE_API+'/aiComplete?grp='+addGrp+'&keyword='+encodeURIComponent(keyword)+'&targetLang='+encodeURIComponent(targetLang);
+    const res=await fetch(url);
     const data=await res.json();
     if(data.error)throw new Error(data.error);
     const parsed=data.data;
@@ -961,7 +961,8 @@ window.changeLang = async function(){
   try{
     const user=window._currentUser;
     if(!user)throw new Error('Nicht angemeldet');
-    await window._updateDoc(window._doc(window._db,'users',user.uid),{anaAil:lang});
+    const res=await azureCall({action:'setUserLang',userId:user.uid,anaAil:lang});
+    if(!res.success)throw new Error(res.error||'Fehler');
     if(window._userProfile)window._userProfile.anaAil=lang;
     toast('Gespeichert!');updateSettingsProfile();
   }catch(e){toast('Fehler: '+e.message,false);}
@@ -1102,20 +1103,6 @@ function buildSearchCard(w){const typeLabel=w.type==='noun'?'Nomen':w.type==='ve
 // SES
 function speak(t){if(!t)return;const u=new SpeechSynthesisUtterance(t);u.lang='de-DE';u.rate=0.85;speechSynthesis.cancel();speechSynthesis.speak(u);}
 function ins(ch){const inp=document.getElementById('wt-inp');if(inp.disabled)return;const s=inp.selectionStart,e=inp.selectionEnd,v=inp.value;inp.value=v.slice(0,s)+ch+v.slice(e);inp.selectionStart=inp.selectionEnd=s+1;inp.focus();if(wDeck[wIdx])updateLBar(inp.value,getExp(wDeck[wIdx]));}
-
-window.changeLang = async function(){
-  const lang=document.getElementById('lang-change').value;
-  if(!lang)return;
-  showLoading('Wird gespeichert...');
-  try{
-    const user=window._currentUser;
-    if(!user)throw new Error('Nicht angemeldet');
-    await window._updateDoc(window._doc(window._db,'users',user.uid),{anaAil:lang});
-    if(window._userProfile)window._userProfile.anaAil=lang;
-    toast('Gespeichert!');updateSettingsProfile();
-  }catch(e){toast('Fehler: '+e.message,false);}
-  hideLoading();
-};
 </script>
 </body>
 </html>
