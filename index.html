@@ -706,6 +706,7 @@ textarea{resize:vertical;min-height:54px}
     <i class="ti ti-school" style="font-size:22px;color:var(--acm)"></i>
     <h1>Deutsch Lernapp</h1>
     <button class="btn sm" onclick="go('s-search')" style="padding:6px 14px;font-size:20px" title="Suchen"><i class="ti ti-search"></i></button>
+    <button class="btn sm" onclick="showMainHelp()" style="padding:6px 14px;font-size:20px" title="Hilfe"><i class="ti ti-help"></i></button>
     <button class="btn sm" onclick="go('s-add')" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:6px 14px;font-size:20px" title="Wort hinzufügen"><i class="ti ti-plus"></i></button>
     <button class="btn sm" onclick="go('s-settings')" style="padding:6px 10px;font-size:18px" title="Einstellungen"><i class="ti ti-settings"></i></button>
   </div>
@@ -1040,6 +1041,7 @@ textarea{resize:vertical;min-height:54px}
 <!-- HELP (İlk kullanıcı) -->
 <div id="s-help-intro" class="scr">
   <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
     <h1 id="help-title">Willkommen! 👋</h1>
   </div>
   <div class="section">
@@ -1215,6 +1217,16 @@ function updateHelpScreen(lang){
   set('help-tip3', '• '+h.tip3);
   set('help-ok', h.ok);
   set('help-no-more-lbl', h.noMore);
+}
+
+function showMainHelp(){
+  const lang = window._userProfile ? (window._userProfile.anaAil || window._uiLang || 'de') : (window._uiLang || 'de');
+  updateHelpScreen(lang);
+  // Help ekranında "bir daha gösterme" kutucuğunu gizle — ana ekrandan açılınca gerek yok
+  const noMore = document.getElementById('help-no-more');
+  const noMoreLbl = document.getElementById('help-no-more-lbl');
+  if(noMore) noMore.parentElement.style.display = 'none';
+  go('s-help-intro');
 }
 
 function showWelcomeHelp(){
