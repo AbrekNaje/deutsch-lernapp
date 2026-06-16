@@ -50,10 +50,8 @@ let userProfile = null;
 let words = [];
 window._words = words;
 
-// UI dili (geçici, localStorage'da saklanır)
-let uiLang = localStorage.getItem('dl_ui_lang') || 'de';
-window._uiLang = uiLang;
-window._setUiLang = (code) => { uiLang = code; window._uiLang = code; localStorage.setItem('dl_ui_lang', code); };
+// UI dili window üzerinden alınır (normal script bloğunda tanımlanır)
+const getUiLang = () => window._uiLang || 'de';
 
 // UI metinleri
 const UI_TEXT = {
@@ -73,7 +71,7 @@ const UI_TEXT = {
   de: { welcome:'Willkommen', learn:'Lernsprache', choose:'Wähle deine Muttersprache', login:'Anmelden', register:'Registrieren', help:'Hilfe', next:'Weiter', confirm:'Bestätigen' }
 };
 
-function t(key){ return (UI_TEXT[uiLang]||UI_TEXT.de)[key]||UI_TEXT.de[key]||key; }
+function t(key){ const lang=getUiLang(); return (UI_TEXT[lang]||UI_TEXT.de)[key]||UI_TEXT.de[key]||key; }
 window._t = t;
 window.t = t;
 
@@ -1162,15 +1160,11 @@ window.changeLang = async function(){
 // UI dili ayarla
 function setUiLang(code){
   window._setUiLang(code);
-  // Bayrak butonunu işaretle
   document.querySelectorAll('#s-welcome .lang-flag-btn').forEach(b=>b.classList.remove('selected'));
   event.target.classList.add('selected');
-  // Butonları güncelle
-  const _t = window.t || ((k)=>k);
-  document.getElementById('wb-help').textContent=_t('help');
-  document.getElementById('wb-login').textContent=_t('login');
+  document.getElementById('wb-help').textContent=t('help');
+  document.getElementById('wb-login').textContent=t('login');
   document.getElementById('welcome-btns').classList.remove('hidden');
-  // Help ekranını bu dilde güncelle
   updateHelpScreen(code);
 }
 
@@ -1237,6 +1231,11 @@ function setAuthTab(t){
 }
 
 // Dil select doldur
+// UI dili — normal script bloğunda tanımlanır
+var uiLang = localStorage.getItem('dl_ui_lang') || 'de';
+window._uiLang = uiLang;
+window._setUiLang = function(code){ uiLang=code; window._uiLang=code; localStorage.setItem('dl_ui_lang',code); };
+
 function fillLangSelect(){
   const LANGS = [
     {code:'tr', name:'Türkçe'},
@@ -1263,22 +1262,15 @@ fillLangSelect();
 
 // Sayfa açılışında kaydedilmiş UI dilini işaretle
 (function initUiLang(){
-  const lang = window._uiLang || localStorage.getItem('dl_ui_lang') || 'de';
-  if(lang && lang !== 'de'){
+  if(uiLang && uiLang !== 'de'){
     const CODES=['tr','en','ar','ko','es','bn','ru','uk','ps','fa','bg','sr','hi'];
-    const idx=CODES.indexOf(lang);
+    const idx=CODES.indexOf(uiLang);
     const btns=document.querySelectorAll('#s-welcome .lang-flag-btn');
     if(idx>=0 && btns[idx]){
       btns[idx].classList.add('selected');
-      // t fonksiyonu henüz yüklenmemiş olabilir, setTimeout ile bekle
-      setTimeout(()=>{
-        const _t = window.t || ((k)=>k);
-        const wbHelp=document.getElementById('wb-help');
-        const wbLogin=document.getElementById('wb-login');
-        if(wbHelp)wbHelp.textContent=_t('help');
-        if(wbLogin)wbLogin.textContent=_t('login');
-        document.getElementById('welcome-btns').classList.remove('hidden');
-      }, 500);
+      document.getElementById('wb-help').textContent=t('help');
+      document.getElementById('wb-login').textContent=t('login');
+      document.getElementById('welcome-btns').classList.remove('hidden');
     }
   }
 })();
