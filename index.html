@@ -101,15 +101,22 @@ async function loadUserProfile(user) {
 
 async function loadWords() {
   window._words = [];
-  showLoading('Wörter werden geladen...');
+  showLoading('Verbindung wird hergestellt...', 10);
   try {
     const user = window._currentUser || currentUser;
+    setLoadingPct(30);
+    document.getElementById('loading-msg').textContent='Wörter werden geladen...';
     const res = await azureCall({ action: 'getAll', userId: user.uid });
+    setLoadingPct(80);
     if (res.success) {
       window._words = res.words;
+      const c = res.counts || {};
+      document.getElementById('loading-msg').textContent=
+        `Nomen: ${c.nomen||0} · Verben: ${c.verben||0} · Adjektiv: ${c.adjektiv||0}`;
     } else {
       throw new Error(res.error || 'Unbekannter Fehler');
     }
+    setLoadingPct(100);
     updateHome();
     toast(window._words.length + ' Wörter geladen');
   } catch(e) {
@@ -446,9 +453,8 @@ textarea{resize:vertical;min-height:54px}
 .toast.show{opacity:1}
 .loading-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.35);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:12px}
 .loading-overlay.show{display:flex}
-.loading-box{background:var(--bg);border-radius:var(--radlg);padding:1.5rem 2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
-.spinner{width:32px;height:32px;border:3px solid var(--acl);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box{background:var(--bg);border-radius:var(--radlg);padding:1.5rem 2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+@keyframes hourglass{0%{transform:rotate(0deg)}40%{transform:rotate(0deg)}50%{transform:rotate(180deg)}90%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
 .lookup-wrap{position:relative}
 .lookup-new{display:none;margin-top:6px;gap:6px}
 .lookup-new.show{display:flex}
@@ -478,7 +484,14 @@ textarea{resize:vertical;min-height:54px}
 <div id="app">
 <div id="toast" class="toast"></div>
 <div id="loading" class="loading-overlay">
-  <div class="loading-box"><div class="spinner"></div><div style="font-size:13px;color:var(--txt2)" id="loading-msg">Laden...</div></div>
+  <div class="loading-box">
+    <div style="font-size:48px;animation:hourglass 1.5s ease-in-out infinite">⏳</div>
+    <div style="font-size:15px;font-weight:500;color:var(--txt)" id="loading-msg">Laden...</div>
+    <div style="width:200px;height:6px;background:var(--bg2);border-radius:99px;overflow:hidden;margin-top:8px">
+      <div id="loading-bar" style="height:100%;background:var(--ac);border-radius:99px;width:0%;transition:width 0.4s ease"></div>
+    </div>
+    <div style="font-size:13px;color:var(--txt2);margin-top:4px" id="loading-pct">0%</div>
+  </div>
 </div>
 
 <!-- AUTH EKRANI -->
@@ -917,8 +930,20 @@ let wGrp='',wTense='praesens',wPron='ich',wProns=['ich','du','er','wir','ihr','s
 // words — window._words ile senkronize (proxy/defineProperty kullanmıyoruz, direkt window._words kullanılacak)
 window._words = window._words || [];
 
-function showLoading(msg){document.getElementById('loading').classList.add('show');document.getElementById('loading-msg').textContent=msg||'Laden...';}
-function hideLoading(){document.getElementById('loading').classList.remove('show');}
+function showLoading(msg, pct){
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('loading-msg').textContent=msg||'Laden...';
+  setLoadingPct(pct||0);
+}
+function setLoadingPct(pct){
+  const p=Math.min(100,Math.max(0,pct));
+  document.getElementById('loading-bar').style.width=p+'%';
+  document.getElementById('loading-pct').textContent=p+'%';
+}
+function hideLoading(){
+  setLoadingPct(100);
+  setTimeout(()=>{document.getElementById('loading').classList.remove('show');setLoadingPct(0);},300);
+}
 function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=msg;t.style.background=ok?'#3B6D11':'#A32D2D';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
 function go(id){
