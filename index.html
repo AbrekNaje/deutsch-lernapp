@@ -411,6 +411,24 @@ window.aiFill = async function() {
   btn.disabled=false;btn.innerHTML='<i class="ti ti-sparkles"></i> Mit KI ausfüllen';
 };
 
+window.downloadCSVTemplate = function(grp) {
+  let content='', filename='';
+  if(grp==='noun'){
+    filename='nomen_vorlage.csv';
+    content='tekil;cogul;turkce;seviye;bolum\nder Hund;die Hunde;Hund;A1.1;1\ndie Katze;die Katzen;Katze;A1.1;1\ndas Kind;die Kinder;Kind;A1.2;2\n';
+  } else if(grp==='verb'){
+    filename='verben_vorlage.csv';
+    content='mastar;turkce;ich;du;er;wir;ihr;sie;perfekt;praeteritum;futur1;futur2;plusquamperfekt;seviye;bolum\ngehen;gitmek;gehe;gehst;geht;gehen;geht;gehen;bin gegangen;ging;werde gehen;werde gegangen sein;war gegangen;A1.1;1\nkommen;gelmek;komme;kommst;kommt;kommen;kommt;kommen;bin gekommen;kam;werde kommen;werde gekommen sein;war gekommen;A1.1;1\n';
+  } else {
+    filename='adjektiv_vorlage.csv';
+    content='tur;kelime;turkce;ekbilgi;seviye;bolum\nadj;groß;büyük;größer / am größten;A1.1;1\nadj;klein;küçük;kleiner / am kleinsten;A1.1;1\npron;ich;ben;;A1.1;1\n';
+  }
+  const blob=new Blob(['\ufeff'+content],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+};
+
 window.triggerFile = (id) => document.getElementById(id).click();
 
 </script>
@@ -744,6 +762,7 @@ textarea{resize:vertical;min-height:54px}
   </div>
   <div class="section">
     <div class="section-title" style="color:#185FA5">Nomen</div>
+    <button class="btn" style="font-size:13px;margin-bottom:8px" onclick="downloadCSVTemplate('noun')"><i class="ti ti-download"></i> Vorlage herunterladen (nomen.csv)</button>
     <div class="upload-zone" onclick="triggerFile('csv-noun')" id="uz-noun">
       <i class="ti ti-upload uzi"></i>
       <p><strong>Datei wählen</strong></p>
@@ -753,6 +772,7 @@ textarea{resize:vertical;min-height:54px}
   </div>
   <div class="section">
     <div class="section-title" style="color:#854F0B">Verben</div>
+    <button class="btn" style="font-size:13px;margin-bottom:8px" onclick="downloadCSVTemplate('verb')"><i class="ti ti-download"></i> Vorlage herunterladen (verben.csv)</button>
     <div class="upload-zone" onclick="triggerFile('csv-verb')" id="uz-verb">
       <i class="ti ti-upload uzi"></i>
       <p><strong>Datei wählen</strong></p>
@@ -762,6 +782,7 @@ textarea{resize:vertical;min-height:54px}
   </div>
   <div class="section">
     <div class="section-title" style="color:#3B6D11">Adjektiv</div>
+    <button class="btn" style="font-size:13px;margin-bottom:8px" onclick="downloadCSVTemplate('adj')"><i class="ti ti-download"></i> Vorlage herunterladen (adjektiv.csv)</button>
     <div class="upload-zone" onclick="triggerFile('csv-adj')" id="uz-adj">
       <i class="ti ti-upload uzi"></i>
       <p><strong>Datei wählen</strong></p>
@@ -1280,7 +1301,7 @@ fillLangSelect();
 function grpPool(grp){const w=window._words||[];return w.filter(x=>grp==='noun'?x.type==='noun':grp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron'));}
 function applyFilter(pool,level,chapter){let r=pool;if(level)r=r.filter(w=>w.level===level);if(chapter)r=r.filter(w=>String(w.chapter)===String(chapter));return r;}
 function fillLevels(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const levels=[...new Set(pool.map(w=>w.level).filter(l=>l))].sort();sel.innerHTML='<option value="">Alle</option>'+levels.map(l=>`<option value="${l}">${l}</option>`).join('');if(levels.includes(cur))sel.value=cur;else sel.value='';}
-function fillChapters(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const chapters=[...new Set(pool.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});sel.innerHTML='<option value="">Alle</option>'+chapters.map(c=>`<option value="${c}">${c}</option>`).join('');if(chapters.map(String).includes(String(cur)))sel.value=cur;else sel.value='';}
+function fillChapters(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const chapters=[...new Set(pool.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const getNum=s=>{const m=String(s).match(/\d+/);return m?Number(m[0]):NaN;};const na=getNum(a),nb=getNum(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});sel.innerHTML='<option value="">Alle</option>'+chapters.map(c=>`<option value="${c}">${c}</option>`).join('');if(chapters.map(String).includes(String(cur)))sel.value=cur;else sel.value='';}
 
 function updateFChapters(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('ff-chapter',filtered);updateFCount();}
 function updateFCount(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const n=applyFilter(pool,lv,ch).length;document.getElementById('ff-count').textContent=n+' Wörter entsprechen diesem Filter';}
@@ -1297,7 +1318,7 @@ function addLookupVal(selId,newId,inpId,type){const inp=document.getElementById(
 function fillAddLookups(){
   const w=window._words||[];
   const levels=[...new Set(w.map(x=>x.level).filter(l=>l))].sort();
-  const chapters=[...new Set(w.map(x=>x.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});
+  const chapters=[...new Set(w.map(x=>x.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const getNum=s=>{const m=String(s).match(/\d+/);return m?Number(m[0]):NaN;};const na=getNum(a),nb=getNum(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});
   const newOpt='<option value="__new__" style="color:var(--ac);font-style:italic">+ Neu eingeben</option>';
   ['n-lv','v-lv','a-lv'].forEach(id=>{
     const s=document.getElementById(id);if(!s)return;
