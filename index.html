@@ -1291,9 +1291,16 @@ fillLangSelect();
     const btns=document.querySelectorAll('#s-welcome .lang-flag-btn');
     if(idx>=0 && btns[idx]){
       btns[idx].classList.add('selected');
-      document.getElementById('wb-help').textContent=t('help');
-      document.getElementById('wb-login').textContent=t('login');
-      document.getElementById('welcome-btns').classList.remove('hidden');
+      // t fonksiyonu module bloğundan gelir, biraz bekle
+      setTimeout(()=>{
+        const _t=window.t||(k=>k);
+        const wbHelp=document.getElementById('wb-help');
+        const wbLogin=document.getElementById('wb-login');
+        if(wbHelp)wbHelp.textContent=_t('help');
+        if(wbLogin)wbLogin.textContent=_t('login');
+        const wb=document.getElementById('welcome-btns');
+        if(wb)wb.classList.remove('hidden');
+      },300);
     }
   }
 })();
