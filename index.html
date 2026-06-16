@@ -210,6 +210,27 @@ function authError(code) {
 window.saveLang = async function() {
   const lang = document.getElementById('lang-select').value;
   if (!lang) { toast('Bitte Sprache wählen', false); return; }
+  
+  // Seçilen dilde onay mesajları
+  const confirmMessages = {
+    tr: 'Ana dilinizi Türkçe olarak seçiyorsunuz. Bu seçim daha sonra değiştirilemez. Onaylıyor musunuz?',
+    en: 'You are selecting English as your native language. This cannot be changed later. Do you confirm?',
+    ar: 'أنت تختار العربية كلغتك الأم. لا يمكن تغيير هذا لاحقاً. هل تؤكد؟',
+    ko: '한국어를 모국어로 선택하고 있습니다. 나중에 변경할 수 없습니다. 확인하시겠습니까?',
+    es: 'Está seleccionando español como su idioma nativo. Esto no se puede cambiar después. ¿Confirma?',
+    bn: 'আপনি বাংলাকে আপনার মাতৃভাষা হিসেবে নির্বাচন করছেন। এটি পরে পরিবর্তন করা যাবে না। আপনি কি নিশ্চিত?',
+    ru: 'Вы выбираете русский язык в качестве родного. Это нельзя изменить позже. Вы подтверждаете?',
+    uk: 'Ви вибираєте українську як рідну мову. Це не можна змінити пізніше. Ви підтверджуєте?',
+    ps: 'تاسو پښتو د خپلې مورنۍ ژبې په توګه غوره کوئ. دا وروسته بدلیدی نشي. آیا تاسو تایید کوئ؟',
+    fa: 'شما فارسی را به عنوان زبان مادری خود انتخاب می‌کنید. این نمی‌تواند بعداً تغییر کند. آیا تأیید می‌کنید؟',
+    bg: 'Избирате български като роден език. Това не може да се промени по-късно. Потвърждавате ли?',
+    sr: 'Бирате српски као матерњи језик. Ово не може да се промени касније. Потврђујете?',
+    hi: 'आप हिंदी को अपनी मातृभाषा के रूप में चुन रहे हैं। इसे बाद में बदला नहीं जा सकता। क्या आप पुष्टि करते हैं?'
+  };
+  
+  const msg = confirmMessages[lang] || confirmMessages['en'];
+  if (!confirm(msg)) return;
+  
   showLoading('Wird gespeichert...');
   try {
     const user = window._currentUser;
@@ -249,7 +270,15 @@ window.saveWord = async function() {
   showLoading('Wird gespeichert...');
   try {
     const res = await azureCall({ action: 'save', userId: user.uid, word: w });
-    if (!res.success) throw new Error(res.error || 'Speicherfehler');
+    if (!res.success) {
+      if (res.duplicate) {
+        toast('Dieses Wort existiert bereits!', false);
+      } else {
+        throw new Error(res.error || 'Speicherfehler');
+      }
+      hideLoading();
+      return;
+    }
     w._id = res._id; w._col = res._col;
     window._words.push(w);
     updateHome(); fillAddLookups(); clearForm();
@@ -600,12 +629,6 @@ textarea{resize:vertical;min-height:54px}
     <div style="font-size:15px;color:var(--txt2)" id="profile-email"></div>
     <div style="font-size:13px;color:var(--txt3);margin-top:4px" id="profile-type"></div>
     <div style="font-size:13px;color:var(--txt3);margin-top:2px" id="profile-lang"></div>
-  </div>
-  <div class="section">
-    <div class="section-title">Muttersprache ändern</div>
-    <select id="lang-change"></select>
-    <div style="height:8px"></div>
-    <button class="btn" onclick="changeLang()"><i class="ti ti-language"></i> Speichern</button>
   </div>
   <button class="btn" onclick="go('s-csv')"><i class="ti ti-upload"></i> CSV importieren</button>
   <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV-Anleitung</button>
@@ -1107,7 +1130,7 @@ function checkWrite(){if(wAnswered)return;const w=wDeck[wIdx];const typed=docume
 function skipWrite(){if(wAnswered)return;const w=wDeck[wIdx];wWrong.push(w);const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.wrong=(o.wrong||0)+1;o.streak=0;updateStats(o);}advWrite();}
 function nextWrite(){advWrite();}
 function advWrite(){if(wGrp==='noun'){if(wStep<1){wStep++;showWrite();}else{wStep=0;wIdx++;if(wIdx>=wDeck.length)finWrite();else showWrite();}}else{wIdx++;if(wIdx>=wDeck.length)finWrite();else showWrite();}}
-function finWrite(){showResult(wCorr,wDeck.length,[...new Map(wWrong.map(w=>[w._id,w])).values()],()=>beginWrite());}
+function finWrite(){const total=wGrp==='noun'?wDeck.length*2:wDeck.length;showResult(wCorr,total,[...new Map(wWrong.map(w=>[w._id,w])).values()],()=>beginWrite());}
 
 function showResult(corr,total,wrongArr,retryFn){go('s-result');document.getElementById('res-pct').textContent=Math.round(corr/total*100)+'%';document.getElementById('res-sub').textContent=corr+' / '+total+' richtig';document.getElementById('res-retry').onclick=retryFn;const el=document.getElementById('res-wrong');if(!wrongArr.length){el.innerHTML='<div style="font-size:13px;color:var(--success)">Alle Fragen richtig beantwortet!</div>';}else{el.innerHTML=wrongArr.map(w=>'<div style="font-size:13px;padding:4px 0;border-bottom:.5px solid var(--brd)">'+w.word+' = '+w.tr+'</div>').join('');}updateHome();}
 
