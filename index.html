@@ -74,7 +74,13 @@ onAuthStateChanged(auth, async (user) => {
       go('s-lang');
     } else {
       await loadWords();
-      go('s-home');
+      // İlk giriş kontrolü
+      const firstLogin = localStorage.getItem('dl_help_seen_' + user.uid);
+      if (!firstLogin) {
+        go('s-help-intro');
+      } else {
+        go('s-home');
+      }
     }
   } else {
     currentUser = null;
@@ -210,7 +216,7 @@ function authError(code) {
 window.saveLang = async function() {
   const lang = document.getElementById('lang-select').value;
   if (!lang) { toast('Bitte Sprache wählen', false); return; }
-  
+
   // Seçilen dilde onay mesajları
   const confirmMessages = {
     tr: 'Ana dilinizi Türkçe olarak seçiyorsunuz. Bu seçim daha sonra değiştirilemez. Onaylıyor musunuz?',
@@ -227,11 +233,11 @@ window.saveLang = async function() {
     sr: 'Бирате српски као матерњи језик. Ово не може да се промени касније. Потврђујете?',
     hi: 'आप हिंदी को अपनी मातृभाषा के रूप में चुन रहे हैं। इसे बाद में बदला नहीं जा सकता। क्या आप पुष्टि करते हैं?'
   };
-  
+
   const msg = confirmMessages[lang] || confirmMessages['en'];
   if (!confirm(msg)) return;
-  
-  showLoading('Wird gespeichert...');
+
+  showLoading('Wird gespeichert...', 50);
   try {
     const user = window._currentUser;
     if(!user) throw new Error('Nicht angemeldet');
@@ -342,24 +348,29 @@ window.loadCSV = function(input, grp) {
 };
 
 window.aiFill = async function() {
+  // Giriş dilini al
+  const inputLang = document.getElementById('ai-input-lang').value;
+  const profile = window._userProfile;
+  const anaAil = profile ? profile.anaAil : 'tr';
+  const LANG_NAMES = {tr:'Türkisch',en:'Englisch',ar:'Arabisch',ko:'Koreanisch',es:'Spanisch',bn:'Bengalisch',ru:'Russisch',uk:'Ukrainisch',ps:'Paschto',fa:'Persisch',bg:'Bulgarisch',sr:'Serbisch',hi:'Hindi'};
+  const targetLang = LANG_NAMES[anaAil] || 'Türkisch';
+
   let keyword='';
-  if(addGrp==='noun')keyword=document.getElementById('n-w').value.trim()||document.getElementById('n-tr').value.trim();
-  else if(addGrp==='verb')keyword=document.getElementById('v-w').value.trim()||document.getElementById('v-tr').value.trim();
+  if(addGrp==='noun') keyword=document.getElementById('n-w').value.trim()||document.getElementById('n-tr').value.trim();
+  else if(addGrp==='verb') keyword=document.getElementById('v-w').value.trim()||document.getElementById('v-tr').value.trim();
   else keyword=document.getElementById('a-w').value.trim()||document.getElementById('a-tr').value.trim();
   if(!keyword){toast('Bitte zuerst ein Wort eingeben',false);return;}
-
-  // Ana dili al
-  const Profile=window._userProfile;
-  const anaAil=Profile?Profile.anaAil:'tr';
-  const LANG_NAMES={tr:'Türkisch',en:'Englisch',ar:'Arabisch',ko:'Koreanisch',es:'Spanisch',bn:'Bengalisch',ru:'Russisch',uk:'Ukrainisch',ps:'Paschto',fa:'Persisch',bg:'Bulgarisch',sr:'Serbisch',hi:'Hindi'};
-  const targetLang=LANG_NAMES[anaAil]||'Türkisch';
 
   const btn=document.getElementById('ai-fill-btn');
   const status=document.getElementById('ai-status');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Wird ausgefüllt...';
   status.classList.remove('hidden');status.textContent='Claude sucht Informationen...';status.style.color='var(--txt2)';
   try{
-    const url=window._AZURE_API+'/aiComplete?grp='+addGrp+'&keyword='+encodeURIComponent(keyword)+'&targetLang='+encodeURIComponent(targetLang);
+    // inputLang='native' ise kelime ana dilde, 'de' ise Almanca
+    const url=window._AZURE_API+'/aiComplete?grp='+addGrp
+      +'&keyword='+encodeURIComponent(keyword)
+      +'&targetLang='+encodeURIComponent(targetLang)
+      +'&inputLang='+encodeURIComponent(inputLang==='native'?anaAil:'de');
     const res=await fetch(url);
     const data=await res.json();
     if(data.error)throw new Error(data.error);
@@ -380,16 +391,17 @@ window.triggerFile = (id) => document.getElementById(id).click();
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --ac:#534AB7;--acl:#EEEDFE;--acm:#7F77DD;
-  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#efefec;
+  --bg:#F5F0FF;--bg2:#EDE6FF;--bg3:#E4DAF5;
   --txt:#1a1a1a;--txt2:#666;--txt3:#999;
-  --brd:rgba(0,0,0,0.12);--brd2:rgba(0,0,0,0.25);
+  --brd:rgba(130,100,200,0.18);--brd2:rgba(130,100,200,0.32);
   --rad:8px;--radlg:12px;
   --success:#3B6D11;--successbg:#EAF3DE;
   --danger:#A32D2D;--dangerbg:#FCEBEB;
   --warn:#854F0B;--warnbg:#FAEEDA;
+  --card-bg:#FFE8F0;--card-brd:rgba(220,130,160,0.25);
 }
 @media(prefers-color-scheme:dark){
-  :root{--bg:#1a1a1a;--bg2:#252525;--bg3:#2e2e2e;--txt:#f0f0f0;--txt2:#aaa;--txt3:#777;--brd:rgba(255,255,255,0.12);--brd2:rgba(255,255,255,0.25);--acl:#26215C;--successbg:#173404;--dangerbg:#501313;--warnbg:#412402;}
+  :root{--bg:#1a1520;--bg2:#221a2e;--bg3:#2a2038;--txt:#f0f0f0;--txt2:#aaa;--txt3:#777;--brd:rgba(180,150,255,0.15);--brd2:rgba(180,150,255,0.28);--acl:#26215C;--successbg:#173404;--dangerbg:#501313;--warnbg:#412402;--card-bg:#2a1520;--card-brd:rgba(220,130,160,0.2);}
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);max-width:540px;margin:0 auto;min-height:100vh}
 #app{padding:.75rem;position:relative}
@@ -410,8 +422,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .brow{display:flex;gap:8px}.brow .btn{flex:1}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.ncard{background:var(--bg);border:.5px solid var(--brd);border-radius:var(--radlg);padding:.9rem;cursor:pointer;text-align:left}
-.ncard:hover{background:var(--bg2)}
+.ncard{background:var(--card-bg);border:.5px solid var(--card-brd);border-radius:var(--radlg);padding:.9rem;cursor:pointer;text-align:left}
+.ncard:hover{background:#FFD6E7}
 .ncard i{font-size:22px;color:var(--acm);display:block;margin-bottom:5px}
 .ncard .nt{font-size:16px;font-weight:500;color:var(--txt)}
 .ncard .ns{font-size:14px;color:var(--txt2);margin-top:2px}
@@ -489,7 +501,9 @@ textarea{resize:vertical;min-height:54px}
 .lookup-new.show{display:flex}
 .lookup-new input{flex:1}
 .lookup-new .btn{width:auto;padding:8px 12px;font-size:14px;flex-shrink:0}
-.auth-logo{text-align:center;padding:2rem 0 1rem}
+.lang-flag-btn{background:var(--bg);border:.5px solid var(--brd2);border-radius:var(--rad);padding:10px 6px;font-size:13px;cursor:pointer;color:var(--txt);text-align:center;transition:all .15s;line-height:1.4}
+.lang-flag-btn:hover{background:var(--acl);border-color:var(--acm)}
+.lang-flag-btn.selected{background:var(--acl);border-color:var(--ac);color:var(--ac);font-weight:500}
 .auth-logo i{font-size:48px;color:var(--ac)}
 .auth-logo h1{font-size:24px;font-weight:600;color:var(--txt);margin-top:8px}
 .auth-logo p{font-size:14px;color:var(--txt2);margin-top:4px}
@@ -570,17 +584,41 @@ textarea{resize:vertical;min-height:54px}
 </div>
 
 <!-- DİL SEÇİMİ -->
+<!-- KARŞILAMA + DİL SEÇİMİ -->
 <div id="s-lang" class="scr">
   <div class="auth-logo">
-    <i class="ti ti-language"></i>
-    <h1>Muttersprache</h1>
-    <p>Bitte wähle deine Muttersprache</p>
+    <i class="ti ti-school"></i>
+    <h1>Deutsch Lernapp</h1>
+    <p style="font-size:13px;margin-top:6px">
+      🇩🇪 Lernsprache: <strong>Deutsch</strong>
+    </p>
   </div>
-  <span class="lbl">Sprache wählen</span>
-  <select id="lang-select">
-    <option value="">-- Bitte wählen --</option>
-  </select>
-  <button class="btn pri" onclick="saveLang()"><i class="ti ti-check"></i> Weiter</button>
+
+  <div class="section">
+    <div class="section-title" style="text-align:center;margin-bottom:12px" id="lang-select-title">
+      Bitte wähle deine Muttersprache
+    </div>
+    <div id="lang-flags" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <button class="lang-flag-btn" onclick="selectLang('tr')">🇹🇷 Türkçe</button>
+      <button class="lang-flag-btn" onclick="selectLang('en')">🇬🇧 English</button>
+      <button class="lang-flag-btn" onclick="selectLang('ar')">🇸🇦 العربية</button>
+      <button class="lang-flag-btn" onclick="selectLang('ko')">🇰🇷 한국어</button>
+      <button class="lang-flag-btn" onclick="selectLang('es')">🇪🇸 Español</button>
+      <button class="lang-flag-btn" onclick="selectLang('bn')">🇧🇩 বাংলা</button>
+      <button class="lang-flag-btn" onclick="selectLang('ru')">🇷🇺 Русский</button>
+      <button class="lang-flag-btn" onclick="selectLang('uk')">🇺🇦 Українська</button>
+      <button class="lang-flag-btn" onclick="selectLang('ps')">🇦🇫 پښتو</button>
+      <button class="lang-flag-btn" onclick="selectLang('fa')">🇮🇷 فارسی</button>
+      <button class="lang-flag-btn" onclick="selectLang('bg')">🇧🇬 Български</button>
+      <button class="lang-flag-btn" onclick="selectLang('sr')">🇷🇸 Српски</button>
+      <button class="lang-flag-btn" onclick="selectLang('hi')">🇮🇳 हिंदी</button>
+    </div>
+  </div>
+
+  <button class="btn pri hidden" id="lang-confirm-btn" onclick="saveLang()">
+    <i class="ti ti-check"></i> <span id="lang-confirm-txt">Weiter</span>
+  </button>
+  <input type="hidden" id="lang-select" value="">
 </div>
 
 <!-- ANA MENÜ -->
@@ -729,6 +767,13 @@ textarea{resize:vertical;min-height:54px}
   <div class="brow">
     <button class="btn" onclick="aiFill()" id="ai-fill-btn"><i class="ti ti-sparkles"></i> Mit KI ausfüllen</button>
     <button class="btn pri" onclick="saveWord()"><i class="ti ti-device-floppy"></i> Speichern</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+    <span style="font-size:13px;color:var(--txt2)">Eingabesprache:</span>
+    <select id="ai-input-lang" style="flex:1;font-size:13px;padding:5px 8px">
+      <option value="de">Deutsch</option>
+      <option value="native">Muttersprache</option>
+    </select>
   </div>
   <div id="ai-status" class="hidden" style="font-size:13px;color:var(--txt2);text-align:center;padding:6px 0"></div>
 </div>
@@ -910,6 +955,36 @@ textarea{resize:vertical;min-height:54px}
   <div id="search-hint" style="text-align:center;color:var(--txt2);padding:2rem;font-size:15px">Suchbegriff eingeben...</div>
 </div>
 
+<!-- HELP (İlk kullanıcı) -->
+<div id="s-help-intro" class="scr">
+  <div class="topbar">
+    <h1>Willkommen! 👋</h1>
+  </div>
+  <div class="section">
+    <div class="section-title">Was ist Deutsch Lernapp?</div>
+    <p style="font-size:14px;color:var(--txt2);line-height:1.6">Eine persönliche Lernkartei für Deutsch. Du kannst Wörter hinzufügen und mit verschiedenen Übungsmethoden lernen.</p>
+  </div>
+  <div class="section">
+    <div class="section-title">📚 Wie funktioniert es?</div>
+    <div style="font-size:14px;color:var(--txt2);line-height:1.8">
+      <div>➕ <strong>Wort hinzufügen</strong> — Tippe auf das + Symbol</div>
+      <div>🤖 <strong>KI-Hilfe</strong> — Gib ein Wort ein, KI füllt alles aus</div>
+      <div>🃏 <strong>Lernkarten</strong> — Karten umdrehen und lernen</div>
+      <div>✏️ <strong>Schreibtest</strong> — Wörter auf Deutsch schreiben</div>
+      <div>☑️ <strong>Multiple-Choice</strong> — Richtige Antwort auswählen</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">💡 Tipps</div>
+    <div style="font-size:14px;color:var(--txt2);line-height:1.8">
+      <div>• Nomen immer mit Artikel eingeben: <strong>der Hund</strong></div>
+      <div>• CSV-Dateien aus Excel importieren möglich</div>
+      <div>• Statistiken werden automatisch gespeichert</div>
+    </div>
+  </div>
+  <button class="btn pri" onclick="dismissHelp()"><i class="ti ti-check"></i> Verstanden — Los geht's!</button>
+</div>
+
 <!-- YARDIM -->
 <div id="s-help" class="scr">
   <div class="topbar"><button class="btn sm" onclick="go('s-settings')"><i class="ti ti-arrow-left"></i></button><h1>CSV-Anleitung</h1></div>
@@ -1018,6 +1093,19 @@ window.changeLang = async function(){
 };
 
 // Auth tab
+function selectLang(code){
+  document.querySelectorAll('.lang-flag-btn').forEach(b=>b.classList.remove('selected'));
+  event.target.classList.add('selected');
+  document.getElementById('lang-select').value=code;
+  document.getElementById('lang-confirm-btn').classList.remove('hidden');
+}
+
+function dismissHelp(){
+  const user=window._currentUser;
+  if(user)localStorage.setItem('dl_help_seen_'+user.uid,'1');
+  go('s-home');
+}
+
 function setAuthTab(t){
   document.querySelectorAll('#auth-tabs .gtab').forEach(b=>b.classList.remove('active'));
   document.querySelector(`#auth-tabs .gtab:${t==='login'?'first':'last'}-child`).classList.add('active');
