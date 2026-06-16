@@ -1196,7 +1196,8 @@ function updateHelpScreen(lang){
 }
 
 function showWelcomeHelp(){
-  updateHelpScreen(uiLang);
+  const lang = window._uiLang || uiLang || 'de';
+  updateHelpScreen(lang);
   go('s-help-intro');
 }
 
