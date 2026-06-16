@@ -50,6 +50,30 @@ let userProfile = null;
 let words = [];
 window._words = words;
 
+// UI dili (geçici, localStorage'da saklanır)
+let uiLang = localStorage.getItem('dl_ui_lang') || 'de';
+
+// UI metinleri
+const UI_TEXT = {
+  tr: { welcome:'Hoş Geldiniz', learn:'Öğrenilen dil', choose:'Ana dilinizi seçin', login:'Giriş Yap', register:'Kayıt Ol', help:'Yardım', next:'Devam', confirm:'Onaylıyorum' },
+  en: { welcome:'Welcome', learn:'Language to learn', choose:'Choose your native language', login:'Sign In', register:'Sign Up', help:'Help', next:'Continue', confirm:'I confirm' },
+  ar: { welcome:'أهلاً وسهلاً', learn:'اللغة المراد تعلمها', choose:'اختر لغتك الأم', login:'تسجيل الدخول', register:'إنشاء حساب', help:'مساعدة', next:'متابعة', confirm:'أؤكد' },
+  ko: { welcome:'환영합니다', learn:'학습 언어', choose:'모국어를 선택하세요', login:'로그인', register:'회원가입', help:'도움말', next:'계속', confirm:'확인합니다' },
+  es: { welcome:'Bienvenido', learn:'Idioma a aprender', choose:'Elige tu idioma nativo', login:'Iniciar sesión', register:'Registrarse', help:'Ayuda', next:'Continuar', confirm:'Confirmo' },
+  bn: { welcome:'স্বাগতম', learn:'শেখার ভাষা', choose:'আপনার মাতৃভাষা বেছে নিন', login:'লগ ইন', register:'নিবন্ধন', help:'সাহায্য', next:'পরবর্তী', confirm:'নিশ্চিত করছি' },
+  ru: { welcome:'Добро пожаловать', learn:'Язык для изучения', choose:'Выберите родной язык', login:'Войти', register:'Регистрация', help:'Помощь', next:'Продолжить', confirm:'Подтверждаю' },
+  uk: { welcome:'Ласкаво просимо', learn:'Мова для вивчення', choose:'Оберіть рідну мову', login:'Увійти', register:'Реєстрація', help:'Допомога', next:'Продовжити', confirm:'Підтверджую' },
+  ps: { welcome:'ښه راغلاست', learn:'د زده کړې ژبه', choose:'خپله مورنۍ ژبه وټاکئ', login:'ننوتل', register:'ثبت نوم', help:'مرسته', next:'دوام', confirm:'تایید کوم' },
+  fa: { welcome:'خوش آمدید', learn:'زبان برای یادگیری', choose:'زبان مادری خود را انتخاب کنید', login:'ورود', register:'ثبت نام', help:'راهنما', next:'ادامه', confirm:'تأیید می‌کنم' },
+  bg: { welcome:'Добре дошли', learn:'Език за учене', choose:'Изберете родния си език', login:'Влизане', register:'Регистрация', help:'Помощ', next:'Продължи', confirm:'Потвърждавам' },
+  sr: { welcome:'Добродошли', learn:'Језик за учење', choose:'Изаберите матерњи језик', login:'Пријава', register:'Регистрација', help:'Помоћ', next:'Настави', confirm:'Потврђујем' },
+  hi: { welcome:'स्वागत है', learn:'सीखने की भाषा', choose:'अपनी मातृभाषा चुनें', login:'लॉग इन', register:'पंजीकरण', help:'सहायता', next:'जारी रखें', confirm:'मैं पुष्टि करता/करती हूं' },
+  de: { welcome:'Willkommen', learn:'Lernsprache', choose:'Wähle deine Muttersprache', login:'Anmelden', register:'Registrieren', help:'Hilfe', next:'Weiter', confirm:'Bestätigen' }
+};
+
+function t(key){ return (UI_TEXT[uiLang]||UI_TEXT.de)[key]||UI_TEXT.de[key]||key; }
+window._t = t;
+
 // Azure Functions API
 const AZURE_API = 'https://deutsch-lernapp-api-eseqdhbkbaehftfa.swedencentral-01.azurewebsites.net/api';
 window._AZURE_API = AZURE_API;
@@ -71,12 +95,14 @@ onAuthStateChanged(auth, async (user) => {
     window._currentUser = user;
     await loadUserProfile(user);
     if (!userProfile.anaAil) {
+      // Yeni kullanıcı — dil seçimi ekranına git
       go('s-lang');
     } else {
       await loadWords();
-      // İlk giriş kontrolü
-      const firstLogin = localStorage.getItem('dl_help_seen_' + user.uid);
-      if (!firstLogin) {
+      // İlk giriş kontrolü — help ekranı göster
+      const helpSeen = localStorage.getItem('dl_help_seen_' + user.uid);
+      if (!helpSeen) {
+        updateHelpScreen(userProfile.anaAil);
         go('s-help-intro');
       } else {
         go('s-home');
@@ -87,7 +113,8 @@ onAuthStateChanged(auth, async (user) => {
     window._currentUser = null;
     userProfile = null;
     words = [];
-    go('s-auth');
+    // Karşılama ekranına git
+    go('s-welcome');
   }
 });
 
@@ -537,16 +564,48 @@ textarea{resize:vertical;min-height:54px}
   </div>
 </div>
 
-<!-- AUTH EKRANI -->
-<div id="s-auth" class="scr active">
+<!-- KARŞILAMA EKRANI -->
+<div id="s-welcome" class="scr active">
   <div class="auth-logo">
     <i class="ti ti-school"></i>
     <h1>Deutsch Lernapp</h1>
-    <p>Lerne Deutsch — überall und jederzeit</p>
+    <p id="welcome-sub">🇩🇪 Lernsprache: <strong>Deutsch</strong></p>
+  </div>
+
+  <div class="section">
+    <div class="section-title" style="text-align:center;margin-bottom:12px" id="welcome-choose-title">Wähle deine Sprache / Choose your language</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <button class="lang-flag-btn" onclick="setUiLang('tr')">🇹🇷 Türkçe</button>
+      <button class="lang-flag-btn" onclick="setUiLang('en')">🇬🇧 English</button>
+      <button class="lang-flag-btn" onclick="setUiLang('ar')">🇸🇦 العربية</button>
+      <button class="lang-flag-btn" onclick="setUiLang('ko')">🇰🇷 한국어</button>
+      <button class="lang-flag-btn" onclick="setUiLang('es')">🇪🇸 Español</button>
+      <button class="lang-flag-btn" onclick="setUiLang('bn')">🇧🇩 বাংলা</button>
+      <button class="lang-flag-btn" onclick="setUiLang('ru')">🇷🇺 Русский</button>
+      <button class="lang-flag-btn" onclick="setUiLang('uk')">🇺🇦 Українська</button>
+      <button class="lang-flag-btn" onclick="setUiLang('ps')">🇦🇫 پښتو</button>
+      <button class="lang-flag-btn" onclick="setUiLang('fa')">🇮🇷 فارسی</button>
+      <button class="lang-flag-btn" onclick="setUiLang('bg')">🇧🇬 Български</button>
+      <button class="lang-flag-btn" onclick="setUiLang('sr')">🇷🇸 Српски</button>
+      <button class="lang-flag-btn" onclick="setUiLang('hi')">🇮🇳 हिंदी</button>
+    </div>
+  </div>
+
+  <div class="brow hidden" id="welcome-btns">
+    <button class="btn" onclick="showWelcomeHelp()"><i class="ti ti-help"></i> <span id="wb-help">Hilfe</span></button>
+    <button class="btn pri" onclick="go('s-auth')"><span id="wb-login">Anmelden</span> <i class="ti ti-arrow-right"></i></button>
+  </div>
+</div>
+
+<!-- AUTH EKRANI -->
+<div id="s-auth" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-welcome')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="auth-title">Deutsch Lernapp</h1>
   </div>
   <div class="gtabs" id="auth-tabs">
-    <button class="gtab active" onclick="setAuthTab('login')">Anmelden</button>
-    <button class="gtab" onclick="setAuthTab('register')">Registrieren</button>
+    <button class="gtab active" id="auth-tab-login" onclick="setAuthTab('login')">Anmelden</button>
+    <button class="gtab" id="auth-tab-register" onclick="setAuthTab('register')">Registrieren</button>
   </div>
 
   <!-- GİRİŞ -->
@@ -958,31 +1017,35 @@ textarea{resize:vertical;min-height:54px}
 <!-- HELP (İlk kullanıcı) -->
 <div id="s-help-intro" class="scr">
   <div class="topbar">
-    <h1>Willkommen! 👋</h1>
+    <h1 id="help-title">Willkommen! 👋</h1>
   </div>
   <div class="section">
-    <div class="section-title">Was ist Deutsch Lernapp?</div>
-    <p style="font-size:14px;color:var(--txt2);line-height:1.6">Eine persönliche Lernkartei für Deutsch. Du kannst Wörter hinzufügen und mit verschiedenen Übungsmethoden lernen.</p>
+    <div class="section-title" id="help-what-title">Was ist Deutsch Lernapp?</div>
+    <p style="font-size:14px;color:var(--txt2);line-height:1.6" id="help-what-desc">Eine persönliche Lernkartei für Deutsch.</p>
   </div>
   <div class="section">
-    <div class="section-title">📚 Wie funktioniert es?</div>
-    <div style="font-size:14px;color:var(--txt2);line-height:1.8">
-      <div>➕ <strong>Wort hinzufügen</strong> — Tippe auf das + Symbol</div>
-      <div>🤖 <strong>KI-Hilfe</strong> — Gib ein Wort ein, KI füllt alles aus</div>
-      <div>🃏 <strong>Lernkarten</strong> — Karten umdrehen und lernen</div>
-      <div>✏️ <strong>Schreibtest</strong> — Wörter auf Deutsch schreiben</div>
-      <div>☑️ <strong>Multiple-Choice</strong> — Richtige Antwort auswählen</div>
+    <div class="section-title">📚 <span id="help-how-title">Wie funktioniert es?</span></div>
+    <div style="font-size:14px;color:var(--txt2);line-height:1.8" id="help-how-content">
+      <div>➕ <strong id="help-add">Wort hinzufügen</strong> — <span id="help-add-desc">Tippe auf das + Symbol</span></div>
+      <div>🤖 <strong id="help-ai">KI-Hilfe</strong> — <span id="help-ai-desc">Gib ein Wort ein, KI füllt alles aus</span></div>
+      <div>🃏 <strong id="help-flash">Lernkarten</strong> — <span id="help-flash-desc">Karten umdrehen und lernen</span></div>
+      <div>✏️ <strong id="help-write">Schreibtest</strong> — <span id="help-write-desc">Wörter auf Deutsch schreiben</span></div>
+      <div>☑️ <strong id="help-mc">Multiple-Choice</strong> — <span id="help-mc-desc">Richtige Antwort auswählen</span></div>
     </div>
   </div>
   <div class="section">
-    <div class="section-title">💡 Tipps</div>
+    <div class="section-title">💡 <span id="help-tips-title">Tipps</span></div>
     <div style="font-size:14px;color:var(--txt2);line-height:1.8">
-      <div>• Nomen immer mit Artikel eingeben: <strong>der Hund</strong></div>
-      <div>• CSV-Dateien aus Excel importieren möglich</div>
-      <div>• Statistiken werden automatisch gespeichert</div>
+      <div id="help-tip1">• Nomen immer mit Artikel eingeben: <strong>der Hund</strong></div>
+      <div id="help-tip2">• CSV-Dateien aus Excel importieren möglich</div>
+      <div id="help-tip3">• Statistiken werden automatisch gespeichert</div>
     </div>
   </div>
-  <button class="btn pri" onclick="dismissHelp()"><i class="ti ti-check"></i> Verstanden — Los geht's!</button>
+  <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+    <input type="checkbox" id="help-no-more" style="width:auto">
+    <label for="help-no-more" style="font-size:13px;color:var(--txt2)" id="help-no-more-lbl">Nicht mehr anzeigen</label>
+  </div>
+  <button class="btn pri" onclick="dismissHelp()"><i class="ti ti-check"></i> <span id="help-ok">Verstanden — Los geht's!</span></button>
 </div>
 
 <!-- YARDIM -->
@@ -1093,8 +1156,55 @@ window.changeLang = async function(){
 };
 
 // Auth tab
-function selectLang(code){
+// UI dili ayarla
+function setUiLang(code){
+  uiLang=code;
+  localStorage.setItem('dl_ui_lang',code);
+  // Bayrak butonunu işaretle
   document.querySelectorAll('.lang-flag-btn').forEach(b=>b.classList.remove('selected'));
+  event.target.classList.add('selected');
+  // Butonları güncelle
+  document.getElementById('wb-help').textContent=t('help');
+  document.getElementById('wb-login').textContent=t('login');
+  document.getElementById('welcome-btns').classList.remove('hidden');
+  // Help ekranını bu dilde güncelle
+  updateHelpScreen(code);
+}
+
+// Help ekranını dile göre güncelle
+function updateHelpScreen(lang){
+  const HELP = {
+    tr:{ title:'Hoş Geldiniz! 👋', what:'Deutsch Lernapp Nedir?', whatDesc:'Almanca öğrenmek için kişisel kelime kartı uygulaması.', how:'Nasıl Çalışır?', add:'Kelime Ekle', addDesc:'+ simgesine dokun', ai:'AI Yardımı', aiDesc:'Bir kelime gir, AI her şeyi doldurur', flash:'Flashcard', flashDesc:'Kartı çevirerek öğren', write:'Yazılı Test', writeDesc:'Almanca yaz', mc:'Çoktan Seçmeli', mcDesc:'Doğru cevabı seç', tips:'İpuçları', tip1:'İsimleri her zaman artikel ile gir: der Hund', tip2:'Excel CSV dosyası yükleyebilirsin', tip3:'İstatistikler otomatik kaydedilir', ok:'Anladım — Başlayalım!', noMore:'Bir daha gösterme' },
+    en:{ title:'Welcome! 👋', what:'What is Deutsch Lernapp?', whatDesc:'A personal flashcard app for learning German.', how:'How does it work?', add:'Add Word', addDesc:'Tap the + icon', ai:'AI Help', aiDesc:'Enter a word, AI fills everything', flash:'Flashcards', flashDesc:'Flip cards and learn', write:'Writing Test', writeDesc:'Write in German', mc:'Multiple Choice', mcDesc:'Select the correct answer', tips:'Tips', tip1:'Always enter nouns with article: der Hund', tip2:'You can import Excel CSV files', tip3:'Statistics are saved automatically', ok:'Got it — Let\'s go!', noMore:'Don\'t show again' },
+    ar:{ title:'أهلاً وسهلاً! 👋', what:'ما هو Deutsch Lernapp؟', whatDesc:'تطبيق بطاقات تعليمية لتعلم اللغة الألمانية.', how:'كيف يعمل؟', add:'إضافة كلمة', addDesc:'اضغط على رمز +', ai:'مساعدة الذكاء الاصطناعي', aiDesc:'أدخل كلمة، الذكاء الاصطناعي يملأ الباقي', flash:'بطاقات التعلم', flashDesc:'اقلب البطاقات وتعلم', write:'اختبار الكتابة', writeDesc:'اكتب بالألمانية', mc:'اختيار من متعدد', mcDesc:'اختر الإجابة الصحيحة', tips:'نصائح', tip1:'أدخل الأسماء دائماً مع المادة: der Hund', tip2:'يمكنك استيراد ملفات Excel CSV', tip3:'تُحفظ الإحصائيات تلقائياً', ok:'فهمت — هيا نبدأ!', noMore:'عدم الإظهار مرة أخرى' },
+    ru:{ title:'Добро пожаловать! 👋', what:'Что такое Deutsch Lernapp?', whatDesc:'Личное приложение для изучения немецкого языка.', how:'Как это работает?', add:'Добавить слово', addDesc:'Нажмите на +', ai:'Помощь ИИ', aiDesc:'Введите слово, ИИ заполнит всё', flash:'Карточки', flashDesc:'Перелистывайте и учите', write:'Тест на написание', writeDesc:'Пишите по-немецки', mc:'Выбор ответа', mcDesc:'Выберите правильный ответ', tips:'Советы', tip1:'Вводите существительные с артиклем: der Hund', tip2:'Можно импортировать файлы Excel CSV', tip3:'Статистика сохраняется автоматически', ok:'Понял(а) — Начинаем!', noMore:'Больше не показывать' },
+  };
+  const h = HELP[lang] || HELP['en'];
+  const set = (id,txt) => { const el=document.getElementById(id); if(el)el.textContent=txt; };
+  set('help-title', h.title);
+  set('help-what-title', h.what);
+  set('help-what-desc', h.whatDesc);
+  set('help-how-title', h.how);
+  set('help-add', h.add); set('help-add-desc', h.addDesc);
+  set('help-ai', h.ai); set('help-ai-desc', h.aiDesc);
+  set('help-flash', h.flash); set('help-flash-desc', h.flashDesc);
+  set('help-write', h.write); set('help-write-desc', h.writeDesc);
+  set('help-mc', h.mc); set('help-mc-desc', h.mcDesc);
+  set('help-tips-title', h.tips);
+  set('help-tip1', '• '+h.tip1);
+  set('help-tip2', '• '+h.tip2);
+  set('help-tip3', '• '+h.tip3);
+  set('help-ok', h.ok);
+  set('help-no-more-lbl', h.noMore);
+}
+
+function showWelcomeHelp(){
+  updateHelpScreen(uiLang);
+  go('s-help-intro');
+}
+
+function selectLang(code){
+  document.querySelectorAll('#lang-flags .lang-flag-btn').forEach(b=>b.classList.remove('selected'));
   event.target.classList.add('selected');
   document.getElementById('lang-select').value=code;
   document.getElementById('lang-confirm-btn').classList.remove('hidden');
@@ -1102,8 +1212,18 @@ function selectLang(code){
 
 function dismissHelp(){
   const user=window._currentUser;
-  if(user)localStorage.setItem('dl_help_seen_'+user.uid,'1');
-  go('s-home');
+  const noMore=document.getElementById('help-no-more');
+  if(user && noMore && noMore.checked){
+    localStorage.setItem('dl_help_seen_'+user.uid,'1');
+  }
+  // Nereden gelindi?
+  if(user && window._userProfile && window._userProfile.anaAil){
+    go('s-home');
+  } else if(user) {
+    go('s-lang');
+  } else {
+    go('s-auth');
+  }
 }
 
 function setAuthTab(t){
@@ -1137,6 +1257,23 @@ function fillLangSelect(){
   });
 }
 fillLangSelect();
+
+// Sayfa açılışında kaydedilmiş UI dilini işaretle
+(function initUiLang(){
+  if(uiLang && uiLang !== 'de'){
+    const CODES=['tr','en','ar','ko','es','bn','ru','uk','ps','fa','bg','sr','hi'];
+    const idx=CODES.indexOf(uiLang);
+    const btns=document.querySelectorAll('#s-welcome .lang-flag-btn');
+    if(idx>=0 && btns[idx]){
+      btns[idx].classList.add('selected');
+      const wbHelp=document.getElementById('wb-help');
+      const wbLogin=document.getElementById('wb-login');
+      if(wbHelp)wbHelp.textContent=t('help');
+      if(wbLogin)wbLogin.textContent=t('login');
+      document.getElementById('welcome-btns').classList.remove('hidden');
+    }
+  }
+})();
 
 // Kelime yardımcıları
 function grpPool(grp){const w=window._words||[];return w.filter(x=>grp==='noun'?x.type==='noun':grp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron'));}
