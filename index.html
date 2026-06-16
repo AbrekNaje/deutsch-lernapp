@@ -52,6 +52,8 @@ window._words = words;
 
 // UI dili (geçici, localStorage'da saklanır)
 let uiLang = localStorage.getItem('dl_ui_lang') || 'de';
+window._uiLang = uiLang;
+window._setUiLang = (code) => { uiLang = code; window._uiLang = code; localStorage.setItem('dl_ui_lang', code); };
 
 // UI metinleri
 const UI_TEXT = {
@@ -73,6 +75,7 @@ const UI_TEXT = {
 
 function t(key){ return (UI_TEXT[uiLang]||UI_TEXT.de)[key]||UI_TEXT.de[key]||key; }
 window._t = t;
+window.t = t;
 
 // Azure Functions API
 const AZURE_API = 'https://deutsch-lernapp-api-eseqdhbkbaehftfa.swedencentral-01.azurewebsites.net/api';
@@ -1158,14 +1161,14 @@ window.changeLang = async function(){
 // Auth tab
 // UI dili ayarla
 function setUiLang(code){
-  uiLang=code;
-  localStorage.setItem('dl_ui_lang',code);
+  window._setUiLang(code);
   // Bayrak butonunu işaretle
-  document.querySelectorAll('.lang-flag-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelectorAll('#s-welcome .lang-flag-btn').forEach(b=>b.classList.remove('selected'));
   event.target.classList.add('selected');
   // Butonları güncelle
-  document.getElementById('wb-help').textContent=t('help');
-  document.getElementById('wb-login').textContent=t('login');
+  const _t = window.t || ((k)=>k);
+  document.getElementById('wb-help').textContent=_t('help');
+  document.getElementById('wb-login').textContent=_t('login');
   document.getElementById('welcome-btns').classList.remove('hidden');
   // Help ekranını bu dilde güncelle
   updateHelpScreen(code);
@@ -1260,17 +1263,22 @@ fillLangSelect();
 
 // Sayfa açılışında kaydedilmiş UI dilini işaretle
 (function initUiLang(){
-  if(uiLang && uiLang !== 'de'){
+  const lang = window._uiLang || localStorage.getItem('dl_ui_lang') || 'de';
+  if(lang && lang !== 'de'){
     const CODES=['tr','en','ar','ko','es','bn','ru','uk','ps','fa','bg','sr','hi'];
-    const idx=CODES.indexOf(uiLang);
+    const idx=CODES.indexOf(lang);
     const btns=document.querySelectorAll('#s-welcome .lang-flag-btn');
     if(idx>=0 && btns[idx]){
       btns[idx].classList.add('selected');
-      const wbHelp=document.getElementById('wb-help');
-      const wbLogin=document.getElementById('wb-login');
-      if(wbHelp)wbHelp.textContent=t('help');
-      if(wbLogin)wbLogin.textContent=t('login');
-      document.getElementById('welcome-btns').classList.remove('hidden');
+      // t fonksiyonu henüz yüklenmemiş olabilir, setTimeout ile bekle
+      setTimeout(()=>{
+        const _t = window.t || ((k)=>k);
+        const wbHelp=document.getElementById('wb-help');
+        const wbLogin=document.getElementById('wb-login');
+        if(wbHelp)wbHelp.textContent=_t('help');
+        if(wbLogin)wbLogin.textContent=_t('login');
+        document.getElementById('welcome-btns').classList.remove('hidden');
+      }, 500);
     }
   }
 })();
