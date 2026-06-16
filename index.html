@@ -367,8 +367,9 @@ window.loadCSV = function(input, grp) {
       if(!res.success)throw new Error(res.error||'Importfehler');
       hideLoading();
       const uzId={'noun':'uz-noun','verb':'uz-verb','adj':'uz-adj'}[grp];
-      document.getElementById(uzId).innerHTML='<i class="ti ti-circle-check uzi" style="color:#3B6D11"></i><p><strong>'+res.added+' Wörter hinzugefügt</strong></p>';
-      toast(res.added+' Wörter hinzugefügt');
+      const skipMsg = res.skipped > 0 ? ` (${res.skipped} übersprungen)` : '';
+      document.getElementById(uzId).innerHTML='<i class="ti ti-circle-check uzi" style="color:#3B6D11"></i><p><strong>'+res.added+' Wörter hinzugefügt'+skipMsg+'</strong></p>';
+      toast(res.added+' Wörter hinzugefügt'+skipMsg);
       await loadWords();
     }catch(err){hideLoading();toast('Fehler: '+err.message,false);}
   };
