@@ -890,7 +890,10 @@ textarea{resize:vertical;min-height:54px}
       <div style="font-size:18px;font-weight:500;color:var(--ac)" id="fl-tr"></div>
       <div style="font-size:13px;color:var(--txt2);margin-top:6px;white-space:pre-line" id="fl-ex"></div>
     </div>
-    <button class="sbtn" onclick="event.stopPropagation();speak(flWord)" style="position:absolute;bottom:10px;right:10px" title="Anhören"><i class="ti ti-volume"></i></button>
+    <div style="position:absolute;bottom:10px;right:10px;display:flex;gap:4px">
+      <button class="sbtn" onclick="event.stopPropagation();speak(flWord)" title="Anhören"><i class="ti ti-volume"></i></button>
+      <button class="sbtn" onclick="event.stopPropagation();speak(flWord,true)" title="Langsam" style="font-size:16px">🐢</button>
+    </div>
   </div>
   <div class="brow" id="fl-rate" style="display:none">
     <button class="btn" style="border-color:var(--danger);color:var(--danger)" onclick="rateFlash(false)"><i class="ti ti-x"></i> Nicht gewusst</button>
@@ -939,7 +942,10 @@ textarea{resize:vertical;min-height:54px}
     <div class="qlbl" id="mt-qlbl"></div>
     <div class="qword" id="mt-q"></div>
     <div class="qhint" id="mt-hint"></div>
-    <button class="sbtn" onclick="speak(mtSpk)" style="margin:8px auto 0" title="Anhören"><i class="ti ti-volume"></i></button>
+    <div style="display:flex;gap:6px;justify-content:center;margin:8px auto 0">
+      <button class="sbtn" onclick="speak(mtSpk)" title="Anhören"><i class="ti ti-volume"></i></button>
+      <button class="sbtn" onclick="speak(mtSpk,true)" title="Langsam" style="font-size:16px">🐢</button>
+    </div>
   </div>
   <div id="mt-opts"></div>
   <div class="fbrow hidden" id="mt-fb"></div>
@@ -987,6 +993,8 @@ textarea{resize:vertical;min-height:54px}
   <div class="wbadge" id="wt-warn">Groß-/Kleinschreibung — als richtig gewertet</div>
   <div class="ubar">
     <button class="ubtn" onclick="ins('ä')">ä</button><button class="ubtn" onclick="ins('ö')">ö</button><button class="ubtn" onclick="ins('ü')">ü</button><button class="ubtn" onclick="ins('Ä')">Ä</button><button class="ubtn" onclick="ins('Ö')">Ö</button><button class="ubtn" onclick="ins('Ü')">Ü</button><button class="ubtn" onclick="ins('ß')">ß</button>
+    <button class="ubtn" onclick="speak(getExp(wDeck[wIdx]))" title="Anhören"><i class="ti ti-volume" style="font-size:14px"></i></button>
+    <button class="ubtn" onclick="speak(getExp(wDeck[wIdx]),true)" title="Langsam">🐢</button>
   </div>
   <div class="brow">
     <button class="btn" onclick="skipWrite()">Überspringen</button>
@@ -1416,7 +1424,7 @@ function doSearch(){const q=document.getElementById('search-inp').value.trim().t
 function buildSearchCard(w){const typeLabel=w.type==='noun'?'Nomen':w.type==='verb'?'Verb':w.type==='pron'?'Pronomen':'Adjektiv';const typeClass=w.type==='noun'?'noun':w.type==='verb'?'verb':'adj';let rows='';const row=(lbl,val)=>val?'<div class="search-row"><span class="search-row-lbl">'+lbl+'</span><span class="search-row-val">'+val+'</span></div>':'';if(w.type==='noun'){rows+=row('Singular',w.word);rows+=row('Plural',w.plural||'—');rows+=row('Türkisch',w.tr);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else if(w.type==='verb'){rows+=row('Infinitiv',w.word);rows+=row('Türkisch',w.tr);if(w.praesens){rows+=row('ich',w.praesens.ich);rows+=row('du',w.praesens.du);rows+=row('er/sie/es',w.praesens.er);rows+=row('wir',w.praesens.wir);rows+=row('ihr',w.praesens.ihr);rows+=row('sie/Sie',w.praesens.sie);}rows+=row('Perfekt',w.perfekt);rows+=row('Präteritum',w.praeteritum);rows+=row('Futur I',w.futur1);rows+=row('Futur II',w.futur2);rows+=row('Plusquamperfekt',w.plusquam);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else{rows+=row('Wort',w.word);rows+=row('Türkisch',w.tr);rows+=row('Zusatzinfo',w.extra);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}rows+=row('Benutzer',w.kullanici);return'<div class="search-card"><div class="search-card-header"><span class="search-card-word">'+w.word+'</span><span class="search-card-type '+typeClass+'">'+typeLabel+'</span></div>'+rows+'</div>';}
 
 // SES
-function speak(t){if(!t)return;const u=new SpeechSynthesisUtterance(t);u.lang='de-DE';u.rate=0.85;speechSynthesis.cancel();speechSynthesis.speak(u);}
+function speak(t,slow){if(!t)return;const u=new SpeechSynthesisUtterance(t);u.lang='de-DE';u.rate=slow?0.5:0.85;speechSynthesis.cancel();speechSynthesis.speak(u);}
 function ins(ch){const inp=document.getElementById('wt-inp');if(inp.disabled)return;const s=inp.selectionStart,e=inp.selectionEnd,v=inp.value;inp.value=v.slice(0,s)+ch+v.slice(e);inp.selectionStart=inp.selectionEnd=s+1;inp.focus();if(wDeck[wIdx])updateLBar(inp.value,getExp(wDeck[wIdx]));}
 </script>
 </body>
