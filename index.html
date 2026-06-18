@@ -412,6 +412,62 @@ window.aiFill = async function() {
   btn.disabled=false;btn.innerHTML='<i class="ti ti-sparkles"></i> Mit KI ausfüllen';
 };
 
+window.openMasterImport = async function() {
+  go('s-master-import');
+  // Seviye ve bölüm listelerini yükle
+  showLoading('Wird geladen...', 30);
+  try {
+    const res = await azureCall({ action: 'masterPreview', tur: 'all', seviye: 'all', bolum: 'all' });
+    if (res.success) {
+      const seviyeSel = document.getElementById('mi-seviye');
+      const bolumSel = document.getElementById('mi-bolum');
+      seviyeSel.innerHTML = '<option value="all">Alle</option>' +
+        res.seviyeler.map(s => `<option value="${s}">${s}</option>`).join('');
+      // Bölümleri sayısal sırala
+      const bolumler = res.bolumler.sort((a,b) => { const na=String(a).match(/\d+/), nb=String(b).match(/\d+/); return na&&nb?Number(na[0])-Number(nb[0]):String(a).localeCompare(String(b)); });
+      bolumSel.innerHTML = '<option value="all">Alle</option>' +
+        bolumler.map(b => `<option value="${b}">${b}</option>`).join('');
+      document.getElementById('mi-preview').textContent = `${res.toplam} Wörter verfügbar`;
+      document.getElementById('mi-import-btn').disabled = false;
+    }
+  } catch(e) { toast('Fehler: ' + e.message, false); }
+  hideLoading();
+};
+
+window.masterPreviewUpdate = async function() {
+  const tur = document.getElementById('mi-tur').value;
+  const seviye = document.getElementById('mi-seviye').value;
+  const bolum = document.getElementById('mi-bolum').value;
+  try {
+    const res = await azureCall({ action: 'masterPreview', tur, seviye, bolum });
+    if (res.success) {
+      document.getElementById('mi-preview').textContent = `${res.toplam} Wörter gefunden`;
+      document.getElementById('mi-import-btn').disabled = res.toplam === 0;
+    }
+  } catch(e) {}
+};
+
+window.doMasterImport = async function() {
+  const tur = document.getElementById('mi-tur').value;
+  const seviye = document.getElementById('mi-seviye').value;
+  const bolum = document.getElementById('mi-bolum').value;
+  const overwrite = document.querySelector('input[name="mi-overwrite"]:checked').value === 'overwrite';
+  const user = window._currentUser;
+  const anaAil = window._userProfile ? window._userProfile.anaAil : 'tr';
+
+  showLoading('Wird importiert...', 20);
+  try {
+    const res = await azureCall({ action: 'masterImport', userId: user.uid, tur, seviye, bolum, anaAil, overwrite });
+    if (!res.success) throw new Error(res.error || 'Fehler');
+    const result = document.getElementById('mi-result');
+    result.classList.remove('hidden');
+    result.textContent = `✅ ${res.added} hinzugefügt, ${res.updated} aktualisiert, ${res.skipped} übersprungen`;
+    toast(`${res.added} Wörter importiert!`);
+    await loadWords();
+  } catch(e) { toast('Fehler: ' + e.message, false); }
+  hideLoading();
+};
+
 window.downloadCSVTemplate = function(grp) {
   let content='', filename='';
   if(grp==='noun'){
@@ -749,8 +805,50 @@ textarea{resize:vertical;min-height:54px}
     <div style="font-size:13px;color:var(--txt3);margin-top:2px" id="profile-lang"></div>
   </div>
   <button class="btn" onclick="go('s-csv')"><i class="ti ti-upload"></i> CSV importieren</button>
+  <button class="btn" onclick="openMasterImport()"><i class="ti ti-database-import"></i> Aus Masterdatenbank importieren</button>
   <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV-Anleitung</button>
   <button class="btn" style="color:var(--danger);border-color:var(--danger)" onclick="doLogout()"><i class="ti ti-logout"></i> Abmelden</button>
+</div>
+
+<!-- MASTER İÇE AKTARMA -->
+<div id="s-master-import" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-settings')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Aus Masterdatenbank</h1>
+  </div>
+  <div class="section">
+    <div class="section-title">Filter</div>
+    <span class="lbl">Wortart</span>
+    <select id="mi-tur" onchange="masterPreviewUpdate()">
+      <option value="all">Alle</option>
+      <option value="noun">Nomen</option>
+      <option value="verb">Verben</option>
+      <option value="adj">Adjektiv / Sonstige</option>
+    </select>
+    <span class="lbl" style="margin-top:8px">Niveau</span>
+    <select id="mi-seviye" onchange="masterPreviewUpdate()">
+      <option value="all">Alle</option>
+    </select>
+    <span class="lbl" style="margin-top:8px">Kapitel</span>
+    <select id="mi-bolum" onchange="masterPreviewUpdate()">
+      <option value="all">Alle</option>
+    </select>
+  </div>
+  <div class="section">
+    <div class="section-title">Vorschau</div>
+    <div id="mi-preview" style="font-size:15px;color:var(--txt2);text-align:center;padding:12px">Bitte Filter wählen...</div>
+  </div>
+  <div class="section">
+    <div class="section-title">Bei vorhandenen Wörtern</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="radio" name="mi-overwrite" value="keep" checked> Meine Wörter behalten</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="radio" name="mi-overwrite" value="overwrite"> Überschreiben</label>
+    </div>
+  </div>
+  <button class="btn pri" id="mi-import-btn" onclick="doMasterImport()" disabled>
+    <i class="ti ti-database-import"></i> Importieren
+  </button>
+  <div id="mi-result" class="hidden" style="font-size:14px;text-align:center;padding:8px;color:var(--success)"></div>
 </div>
 
 <!-- CSV YÜKLE -->
