@@ -1755,10 +1755,14 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
         const missing=d.filter(w=>!w.praesens);
         if(missing.length){
           showLoading('Konjugationen werden geladen...',30);
-          await Promise.all(missing.slice(0,20).map(async w=>{
-            const res=await azureCall({action:'getWordDetail',_id:w._id,_col:w._col});
-            if(res.success){Object.assign(w,res.word);const orig=(window._words||[]).find(x=>x._id===w._id);if(orig)Object.assign(orig,res.word);}
-          }));
+          const chunk=missing.slice(0,20);
+          for(let i=0;i<chunk.length;i++){
+            try{
+              const res=await azureCall({action:'getWordDetail',_id:chunk[i]._id,_col:chunk[i]._col});
+              if(res.success){Object.assign(chunk[i],res.word);const orig=(window._words||[]).find(x=>x._id===chunk[i]._id);if(orig)Object.assign(orig,res.word);}
+            }catch(e){}
+            setLoadingPct(30+Math.round((i+1)/chunk.length*60));
+          }
           hideLoading();
         }
         deck=d.filter(w=>w.praesens&&w.praesens[mPron]);
