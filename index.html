@@ -1754,14 +1754,18 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
       if(mTense==='praesens'){
         const missing=d.filter(w=>!w.praesens);
         if(missing.length){
-          showLoading('Konjugationen werden geladen...',30);
-          const chunk=missing.slice(0,20);
+          showLoading('Konjugationen werden geladen...',20);
+          const chunk=missing.slice(0,50);
           for(let i=0;i<chunk.length;i++){
             try{
               const res=await azureCall({action:'getWordDetail',_id:chunk[i]._id,_col:chunk[i]._col});
-              if(res.success){Object.assign(chunk[i],res.word);const orig=(window._words||[]).find(x=>x._id===chunk[i]._id);if(orig)Object.assign(orig,res.word);}
+              if(res.success){
+                Object.assign(chunk[i],res.word);
+                const orig=(window._words||[]).find(x=>x._id===chunk[i]._id);
+                if(orig)Object.assign(orig,res.word);
+              }
             }catch(e){}
-            setLoadingPct(30+Math.round((i+1)/chunk.length*60));
+            setLoadingPct(20+Math.round((i+1)/chunk.length*70));
           }
           hideLoading();
         }
