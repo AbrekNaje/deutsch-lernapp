@@ -1737,10 +1737,10 @@ function updatePronVisibility(tenseId,forWrite){
   const selId=forWrite?'ps-write':'ps-multi';
   const lbl=document.getElementById(lblId);
   const sel=document.getElementById(selId);
-  const isMastar=tenseId==='mastar';
-  // Sadece Infinitiv'de şahıs seçimi aktif
-  if(lbl){lbl.style.opacity=isMastar?'1':'0.3';lbl.textContent=isMastar?'Person wählen':'Person (nicht anwendbar)';}
-  if(sel){sel.style.opacity=isMastar?'1':'0.3';sel.style.pointerEvents=isMastar?'auto':'none';}
+  const isPraesens=tenseId==='praesens';
+  // Sadece Präsens'te şahıs seçimi aktif
+  if(lbl){lbl.style.opacity=isPraesens?'1':'0.3';lbl.textContent=isPraesens?'Person wählen':'Person (nicht anwendbar)';}
+  if(sel){sel.style.opacity=isPraesens?'1':'0.3';sel.style.pointerEvents=isPraesens?'auto':'none';}
   buildProns(selId,forWrite);
 }
 function buildProns(cid,forWrite){const c=document.getElementById(cid);c.innerHTML='';const isDisabled=forWrite?(wTense==='mastar'):(mTense==='mastar');PRONOUNS.forEach(p=>{const b=document.createElement('button');if(forWrite){const active=wProns.includes(p.id);b.className='pron-btn'+(active?' active':'');b.disabled=isDisabled;b.style.opacity=isDisabled?'0.4':'1';b.textContent=p.lbl;b.onclick=()=>{if(isDisabled)return;if(wProns.includes(p.id)){if(wProns.length>1)wProns=wProns.filter(x=>x!==p.id);}else{wProns.push(p.id);}buildProns(cid,true);};}else{b.className='pron-btn'+(p.id===mPron?' active':'');b.disabled=isDisabled;b.style.opacity=isDisabled?'0.4':'1';b.textContent=p.lbl;b.onclick=()=>{if(isDisabled)return;document.querySelectorAll('#'+cid+' .pron-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');mPron=p.id;};}c.appendChild(b);});}
