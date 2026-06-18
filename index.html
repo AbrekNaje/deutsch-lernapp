@@ -689,6 +689,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .gtab.v.active{background:#FAEEDA;color:#854F0B}
 .gtab.a.active{background:#EAF3DE;color:#3B6D11}
 .lbl{font-size:15px;color:var(--txt2);display:block;margin-bottom:4px;margin-top:8px}
+input[type="checkbox"],input[type="radio"]{width:18px;height:18px;border-radius:3px!important;accent-color:var(--ac);cursor:pointer;flex-shrink:0;appearance:auto}
+label{cursor:pointer;display:flex;align-items:center;gap:8px}
 input,select,textarea{width:100%;padding:9px 12px;border:.5px solid var(--brd2);border-radius:var(--rad);font-size:16px;background:var(--bg);color:var(--txt);font-family:inherit}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acm)}
 textarea{resize:vertical;min-height:54px}
@@ -1016,9 +1018,9 @@ textarea{resize:vertical;min-height:54px}
   </div>
   <div class="section">
     <div class="section-title">Bei vorhandenen Wörtern</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="radio" name="mi-overwrite" value="keep" checked> Meine Wörter behalten</label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="radio" name="mi-overwrite" value="overwrite"> Überschreiben</label>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <label><input type="radio" name="mi-overwrite" value="keep" checked> Meine Wörter behalten (überspringen)</label>
+      <label><input type="radio" name="mi-overwrite" value="overwrite"> Überschreiben</label>
     </div>
   </div>
   <button class="btn pri" id="mi-import-btn" onclick="doMasterImport()" disabled>
@@ -1145,9 +1147,7 @@ textarea{resize:vertical;min-height:54px}
       <div><span class="lbl">Kapitel</span><select id="ff-chapter" onchange="updateFCount()"><option value="">Alle</option></select></div>
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="ff-list" onchange="updateFCount()"><option value="">Alle Wörter</option></select></div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px;color:var(--txt2)">
-      <input type="checkbox" id="ff-sentences"> Beispielsätze anzeigen
-    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="ff-sentences"> Beispielsätze anzeigen</label>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="ff-count"></div>
   </div>
   <button class="btn pri" onclick="beginFlash()"><i class="ti ti-player-play"></i> Starten</button>
@@ -1167,10 +1167,14 @@ textarea{resize:vertical;min-height:54px}
     <div id="fl-back" class="hidden" style="text-align:center">
       <div style="font-size:18px;font-weight:500;color:var(--ac)" id="fl-tr"></div>
       <div style="font-size:13px;color:var(--txt2);margin-top:6px;white-space:pre-line" id="fl-ex"></div>
+      <div id="fl-sentences" class="hidden" style="margin-top:12px;text-align:left;border-top:1px solid var(--brd);padding-top:10px">
+        <div style="font-size:11px;color:var(--txt3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Beispielsätze</div>
+        <div id="fl-sent-list" style="font-size:13px;color:var(--txt2);display:flex;flex-direction:column;gap:8px"></div>
+      </div>
     </div>
     <div style="position:absolute;bottom:10px;right:10px;display:flex;gap:4px">
       <button class="sbtn" onclick="event.stopPropagation();speak(flWord)" title="Anhören"><i class="ti ti-volume"></i></button>
-      <button class="sbtn" onclick="event.stopPropagation();speak(flWord,true)" title="Langsam" style="font-size:16px">🐢</button>
+      <button class="sbtn" onclick="event.stopPropagation();speak(flWord,true)" title="Langsam" style="font-size:16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="5" ry="4"/><circle cx="12" cy="7" r="2"/><line x1="7" y1="10" x2="4" y2="13"/><line x1="17" y1="10" x2="20" y2="13"/><line x1="8" y1="15" x2="6" y2="18"/><line x1="16" y1="15" x2="18" y2="18"/><line x1="12" y1="16" x2="12" y2="20"/></svg></button>
     </div>
   </div>
   <div class="brow" id="fl-rate" style="display:none">
@@ -1190,9 +1194,7 @@ textarea{resize:vertical;min-height:54px}
       <div><span class="lbl">Kapitel</span><select id="mf-chapter" onchange="updateMCount()"><option value="">Alle</option></select></div>
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="mf-list" onchange="updateMCount()"><option value="">Alle Wörter</option></select></div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px;color:var(--txt2)">
-      <input type="checkbox" id="mf-sentences"> Beispielsätze anzeigen
-    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="mf-sentences"> Beispielsätze anzeigen</label>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="mf-count"></div>
   </div>
   <div id="ms-noun" class="step-box hidden">
@@ -1226,11 +1228,12 @@ textarea{resize:vertical;min-height:54px}
     <div class="qhint" id="mt-hint"></div>
     <div style="display:flex;gap:6px;justify-content:center;margin:8px auto 0">
       <button class="sbtn" onclick="speak(mtSpk)" title="Anhören"><i class="ti ti-volume"></i></button>
-      <button class="sbtn" onclick="speak(mtSpk,true)" title="Langsam" style="font-size:16px">🐢</button>
+      <button class="sbtn" onclick="speak(mtSpk,true)" title="Langsam" style="font-size:16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="5" ry="4"/><circle cx="12" cy="7" r="2"/><line x1="7" y1="10" x2="4" y2="13"/><line x1="17" y1="10" x2="20" y2="13"/><line x1="8" y1="15" x2="6" y2="18"/><line x1="16" y1="15" x2="18" y2="18"/><line x1="12" y1="16" x2="12" y2="20"/></svg></button>
     </div>
   </div>
   <div id="mt-opts"></div>
   <div class="fbrow hidden" id="mt-fb"></div>
+  <div id="mt-sentences" class="hidden" style="margin:8px 0;font-size:13px;color:var(--txt2);border-left:2px solid var(--acm);padding-left:8px;display:flex;flex-direction:column;gap:6px" id="mt-sent-list"></div>
   <button class="btn pri hidden" id="mt-next" onclick="nextMulti()">Weiter <i class="ti ti-arrow-right"></i></button>
 </div>
 
@@ -1244,9 +1247,7 @@ textarea{resize:vertical;min-height:54px}
       <div><span class="lbl">Kapitel</span><select id="wf-chapter" onchange="updateWCount()"><option value="">Alle</option></select></div>
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="wf-list" onchange="updateWCount()"><option value="">Alle Wörter</option></select></div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px;color:var(--txt2)">
-      <input type="checkbox" id="wf-sentences"> Beispielsätze anzeigen
-    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="wf-sentences"> Beispielsätze anzeigen</label>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="wf-count"></div>
   </div>
   <div id="ws-verb" class="step-box hidden">
@@ -1280,7 +1281,7 @@ textarea{resize:vertical;min-height:54px}
   <div class="ubar">
     <button class="ubtn" onclick="ins('ä')">ä</button><button class="ubtn" onclick="ins('ö')">ö</button><button class="ubtn" onclick="ins('ü')">ü</button><button class="ubtn" onclick="ins('Ä')">Ä</button><button class="ubtn" onclick="ins('Ö')">Ö</button><button class="ubtn" onclick="ins('Ü')">Ü</button><button class="ubtn" onclick="ins('ß')">ß</button>
     <button class="ubtn" onclick="speak(getExp(wDeck[wIdx]))" title="Anhören"><i class="ti ti-volume" style="font-size:14px"></i></button>
-    <button class="ubtn" onclick="speak(getExp(wDeck[wIdx]),true)" title="Langsam">🐢</button>
+    <button class="ubtn" onclick="speak(getExp(wDeck[wIdx]),true)" title="Langsam"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="5" ry="4"/><circle cx="12" cy="7" r="2"/><line x1="7" y1="10" x2="4" y2="13"/><line x1="17" y1="10" x2="20" y2="13"/><line x1="8" y1="15" x2="6" y2="18"/><line x1="16" y1="15" x2="18" y2="18"/><line x1="12" y1="16" x2="12" y2="20"/></svg></button>
   </div>
   <div class="brow">
     <button class="btn" onclick="skipWrite()">Überspringen</button>
@@ -1360,10 +1361,7 @@ textarea{resize:vertical;min-height:54px}
       <div id="help-tip3">• Statistiken werden automatisch gespeichert</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-    <input type="checkbox" id="help-no-more" style="width:auto">
-    <label for="help-no-more" style="font-size:13px;color:var(--txt2)" id="help-no-more-lbl">Nicht mehr anzeigen</label>
-  </div>
+  <label style="margin:4px 0"><input type="checkbox" id="help-no-more"> <span id="help-no-more-lbl">Nicht mehr anzeigen</span></label>
   <button class="btn pri" onclick="dismissHelp()"><i class="ti ti-check"></i> <span id="help-ok">Verstanden — Los geht's!</span></button>
 </div>
 
@@ -1655,9 +1653,28 @@ function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p
 
 // FLASHCARD
 function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen – Lernkarten':grp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Alle</option>';updateFChapters();if(window.fillListSelects)window.fillListSelects();go('s-fsetup');}
-function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool=applyFilter(grpPool(flGrp),lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=pool.filter(w=>items.some(i=>i.WordId===w._id));}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);flDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
+function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);flDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
 function showFlash(){const w=flDeck[flIdx];flFlipped=false;flWord=w.word;document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · '+w.chapter:'');document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');const art=document.getElementById('fl-art');art.textContent='';art.style.color='';document.getElementById('fl-w').textContent=w.word;document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Plural: '+w.plural:'Tippen zum Umdrehen';document.getElementById('fl-tr').textContent=w.tr;let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;document.getElementById('fl-ex').textContent=ex;}
-function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');}
+function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');
+  // Örnek cümleler
+  if(flShowSentences){
+    const w=flDeck[flIdx];
+    const sentEl=document.getElementById('fl-sentences');
+    const listEl=document.getElementById('fl-sent-list');
+    sentEl.classList.remove('hidden');
+    listEl.innerHTML='<div style="color:var(--txt3);font-size:12px">Wird geladen...</div>';
+    const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
+    azureCall({action:'getSentences',almancaKelime:w.word,dil:anaAil}).then(res=>{
+      if(res.success&&res.sentences.length){
+        listEl.innerHTML=res.sentences.map(s=>`<div style="border-left:2px solid var(--acm);padding-left:8px"><div style="color:var(--txt)">${s.AlmancaCumle}</div><div style="color:var(--txt2);font-size:12px;margin-top:2px">${s.CeviriCumle||''}</div></div>`).join('');
+      } else {
+        listEl.innerHTML='<div style="color:var(--txt3);font-size:12px">Keine Beispielsätze gefunden.</div>';
+      }
+    });
+  } else {
+    document.getElementById('fl-sentences').classList.add('hidden');
+  }
+}
 function rateFlash(ok){const w=flDeck[flIdx];const o=(window._words||[]).find(x=>x._id===w._id);if(o){if(ok){o.correct=(o.correct||0)+1;o.streak=(o.streak||0)+1;}else{o.wrong=(o.wrong||0)+1;o.streak=0;}updateStats(o);}flIdx++;if(flIdx>=flDeck.length){updateHome();go('s-fsetup');toast('Kartenstapel abgeschlossen!');}else showFlash();}
 
 // SEÇMELİ
@@ -1675,7 +1692,22 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
   mDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);
   mIdx=0;mCorr=0;mWrong=[];document.getElementById('mt-title').textContent=mGrp==='noun'?'Nomen – Multiple-Choice-Test':mGrp==='verb'?'Verben – Multiple-Choice-Test':'Adjektiv – Multiple-Choice-Test';go('s-multi');showMulti();}
 function showMulti(){const w=mDeck[mIdx];document.getElementById('mt-ctr').textContent=(mIdx+1)+'/'+mDeck.length;document.getElementById('mt-prog').style.width=(mIdx/mDeck.length*100)+'%';document.getElementById('mt-fb').classList.add('hidden');document.getElementById('mt-next').classList.add('hidden');let q='',qlbl='';if(mGrp==='verb'){const tl=TENSES.find(t=>t.id===mTense).lbl;if(mTense==='mastar'){qlbl=mDir==='de-tr'?'Was bedeutet es?':'Wie heißt es auf Deutsch? (Infinitiv)';q=mDir==='de-tr'?w.word:w.tr;mtSpk=w.word;}else{const pl=PRONOUNS.find(p=>p.id===mPron).lbl;qlbl=tl+' — '+pl+' Form?';q=w.word;mtSpk=w.word;}}else if(mGrp==='noun'){if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es auf Türkisch?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}else{if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es auf Türkisch?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}document.getElementById('mt-q').textContent=q;document.getElementById('mt-qlbl').textContent=qlbl;document.getElementById('mt-hint').textContent='';const others=grpPool(mGrp).filter(x=>x._id!==w._id).sort(()=>Math.random()-.5).slice(0,3);const opts=[w,...others].sort(()=>Math.random()-.5);const el=document.getElementById('mt-opts');el.innerHTML='';opts.forEach(o=>{let lbl='';if(mGrp==='verb'){if(mTense==='mastar')lbl=mDir==='de-tr'?(o.tr||o.word):o.word;else lbl=mTense==='praesens'?(o.praesens&&o.praesens[mPron]?o.praesens[mPron]:o.word):o[mTense]||o.word;}else if(mGrp==='noun'){lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}else{lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}const btn=document.createElement('button');btn.className='opt';btn.textContent=lbl;btn.onclick=()=>answerMulti(btn,o._id===w._id,w);el.appendChild(btn);});}
-function answerMulti(btn,correct,w){document.querySelectorAll('#mt-opts .opt').forEach(b=>b.disabled=true);let cl='';if(mGrp==='verb'){if(mTense==='mastar')cl=mDir==='de-tr'?(w.tr||w.word):w.word;else cl=mTense==='praesens'?(w.praesens&&w.praesens[mPron]?w.praesens[mPron]:w.word):w[mTense]||w.word;}else if(mGrp==='noun'){cl=mDir==='de-tr'?(w.tr||w.word):w.word;}else{cl=mDir==='de-tr'?(w.tr||w.word):w.word;}if(correct){btn.classList.add('ok');mCorr++;const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.correct=(o.correct||0)+1;o.streak=(o.streak||0)+1;updateStats(o);}}else{btn.classList.add('no');document.querySelectorAll('#mt-opts .opt').forEach(b=>{if(b.textContent===cl)b.classList.add('ok');});mWrong.push(w);const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.wrong=(o.wrong||0)+1;o.streak=0;updateStats(o);}document.getElementById('mt-fb').innerHTML='<span class="no">Richtig wäre: '+cl+'</span>';document.getElementById('mt-fb').classList.remove('hidden');}document.getElementById('mt-next').classList.remove('hidden');}
+function answerMulti(btn,correct,w){document.querySelectorAll('#mt-opts .opt').forEach(b=>b.disabled=true);let cl='';if(mGrp==='verb'){if(mTense==='mastar')cl=mDir==='de-tr'?(w.tr||w.word):w.word;else cl=mTense==='praesens'?(w.praesens&&w.praesens[mPron]?w.praesens[mPron]:w.word):w[mTense]||w.word;}else if(mGrp==='noun'){cl=mDir==='de-tr'?(w.tr||w.word):w.word;}else{cl=mDir==='de-tr'?(w.tr||w.word):w.word;}if(correct){btn.classList.add('ok');mCorr++;const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.correct=(o.correct||0)+1;o.streak=(o.streak||0)+1;updateStats(o);}}else{btn.classList.add('no');document.querySelectorAll('#mt-opts .opt').forEach(b=>{if(b.textContent===cl)b.classList.add('ok');});mWrong.push(w);const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.wrong=(o.wrong||0)+1;o.streak=0;updateStats(o);}document.getElementById('mt-fb').innerHTML='<span class="no">Richtig wäre: '+cl+'</span>';document.getElementById('mt-fb').classList.remove('hidden');}document.getElementById('mt-next').classList.remove('hidden');
+  // Örnek cümleler
+  const sentEl=document.getElementById('mt-sentences');
+  if(mShowSentences&&sentEl){
+    sentEl.classList.remove('hidden');
+    sentEl.innerHTML='<div style="color:var(--txt3);font-size:12px">Beispielsätze werden geladen...</div>';
+    const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
+    azureCall({action:'getSentences',almancaKelime:w.word,dil:anaAil}).then(res=>{
+      if(res.success&&res.sentences.length){
+        sentEl.innerHTML=res.sentences.map(s=>`<div><div style="color:var(--txt)">${s.AlmancaCumle}</div><div style="color:var(--txt2);font-size:12px">${s.CeviriCumle||''}</div></div>`).join('');
+      } else {
+        sentEl.innerHTML='<div style="color:var(--txt3);font-size:12px">Keine Beispielsätze gefunden.</div>';
+      }
+    });
+  } else if(sentEl){sentEl.classList.add('hidden');}
+}
 function nextMulti(){mIdx++;if(mIdx>=mDeck.length)showResult(mCorr,mDeck.length,mWrong,()=>beginMulti());else showMulti();}
 
 // YAZILI
