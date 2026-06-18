@@ -1664,7 +1664,8 @@ function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById(
     sentEl.classList.remove('hidden');
     listEl.innerHTML='<div style="color:var(--txt3);font-size:12px">Wird geladen...</div>';
     const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
-    azureCall({action:'getSentences',almancaKelime:w.word,dil:anaAil}).then(res=>{
+    fetch(window._AZURE_API+'/words?action=getSentences&almancaKelime='+encodeURIComponent(w.word)+'&dil='+anaAil)
+      .then(r=>r.json()).then(res=>{
       if(res.success&&res.sentences.length){
         listEl.innerHTML=res.sentences.map(s=>`<div style="border-left:2px solid var(--acm);padding-left:8px"><div style="color:var(--txt)">${s.AlmancaCumle}</div><div style="color:var(--txt2);font-size:12px;margin-top:2px">${s.CeviriCumle||''}</div></div>`).join('');
       } else {
@@ -1699,7 +1700,7 @@ function answerMulti(btn,correct,w){document.querySelectorAll('#mt-opts .opt').f
     sentEl.classList.remove('hidden');
     sentEl.innerHTML='<div style="color:var(--txt3);font-size:12px">Beispielsätze werden geladen...</div>';
     const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
-    azureCall({action:'getSentences',almancaKelime:w.word,dil:anaAil}).then(res=>{
+    fetch(window._AZURE_API+'/words?action=getSentences&almancaKelime='+encodeURIComponent(w.word)+'&dil='+anaAil).then(r=>r.json()).then(res=>{
       if(res.success&&res.sentences.length){
         sentEl.innerHTML=res.sentences.map(s=>`<div><div style="color:var(--txt)">${s.AlmancaCumle}</div><div style="color:var(--txt2);font-size:12px">${s.CeviriCumle||''}</div></div>`).join('');
       } else {
