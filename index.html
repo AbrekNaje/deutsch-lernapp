@@ -1759,18 +1759,26 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
             try{
               const res=await azureCall({action:'getWordDetail',_id:missing[i]._id,_col:missing[i]._col});
               if(res.success){
-                // window._words içindeki orijinal objeyi güncelle
+                // window._words içindeki orijinal objeyi bul ve güncelle
                 const orig=(window._words||[]).find(x=>x._id===missing[i]._id);
-                if(orig){Object.assign(orig,res.word);Object.assign(missing[i],orig);}
-                else Object.assign(missing[i],res.word);
+                if(orig){
+                  orig.praesens=res.word.praesens;
+                  orig.perfekt=res.word.perfekt;
+                  orig.praeteritum=res.word.praeteritum;
+                  orig.futur1=res.word.futur1;
+                  orig.futur2=res.word.futur2;
+                  orig.plusquam=res.word.plusquam;
+                }
               }
             }catch(e){}
             setLoadingPct(20+Math.round((i+1)/missing.length*70));
           }
           hideLoading();
         }
-        deck=d.filter(w=>w.praesens&&w.praesens[mPron]);
-        console.log('mPron:',mPron,'d:',d.length,'deck:',deck.length,'sample:',d[0]?.praesens);
+        // d'yi window._words'den yeniden oluştur (güncel praesens ile)
+        const dFresh=(window._words||[]).filter(w=>d.some(x=>x._id===w._id));
+        deck=dFresh.filter(w=>w.praesens&&w.praesens[mPron]);
+        console.log('mPron:',mPron,'dFresh:',dFresh.length,'deck:',deck.length,'sample:',dFresh[0]?.praesens);
         if(!deck.length){alert('Keine Daten für die gewählten Personen!');return;}
       } else if(mTense==='mastar'){
         deck=d;
