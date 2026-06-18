@@ -138,15 +138,31 @@ async function loadWords() {
   showLoading('Verbindung wird hergestellt...', 10);
   try {
     const user = window._currentUser || currentUser;
-    setLoadingPct(30);
+
+    // Adım 1: Özet — anında göster
+    setLoadingPct(20);
+    document.getElementById('loading-msg').textContent='Übersicht wird geladen...';
+    const summary = await azureCall({ action: 'getSummary', userId: user.uid });
+    if (summary.success) {
+      const c = summary.counts;
+      document.getElementById('loading-msg').textContent=
+        `Nomen: ${c.nomen} · Verben: ${c.verben} · Adjektiv: ${c.adjektiv}`;
+    }
+    setLoadingPct(40);
+    hideLoading();
+
+    // Adım 2: Hafif kelime listesi — arka planda
     document.getElementById('loading-msg').textContent='Wörter werden geladen...';
-    const res = await azureCall({ action: 'getAll', userId: user.uid });
-    setLoadingPct(80);
+    document.getElementById('loading').classList.add('show');
+    setLoadingPct(50);
+
+    const res = await azureCall({ action: 'getAllLight', userId: user.uid });
+    setLoadingPct(90);
     if (res.success) {
       window._words = res.words;
-      const c = res.counts || {};
+      const c = res.counts;
       document.getElementById('loading-msg').textContent=
-        `Nomen: ${c.nomen||0} · Verben: ${c.verben||0} · Adjektiv: ${c.adjektiv||0}`;
+        `Nomen: ${c.nomen} · Verben: ${c.verben} · Adjektiv: ${c.adjektiv}`;
     } else {
       throw new Error(res.error || 'Unbekannter Fehler');
     }
@@ -1403,7 +1419,7 @@ const TENSES=[{id:'mastar',lbl:'Infinitiv'},{id:'praesens',lbl:'Präsens'},{id:'
 let addGrp='noun', listGrp='noun';
 let flDeck=[],flIdx=0,flFlipped=false,flWord='',flGrp='',flShowSentences=false;
 let mGrp='',mDir='de-tr',mTense='mastar',mPron='ich',mDeck=[],mIdx=0,mCorr=0,mWrong=[],mtSpk='',mShowSentences=false;
-let wGrp='',wTense='praesens',wPron='ich',wProns=['ich','du','er','wir','ihr','sie'],wDeck=[],wIdx=0,wStep=0,wCorr=0,wWrong=[],wAnswered=false;
+let wGrp='',wTense='praesens',wPron='ich',wProns=['ich','du','er','wir','ihr','sie'],wDeck=[],wIdx=0,wStep=0,wCorr=0,wWrong=[],wAnswered=false,wShowSentences=false;
 
 // words — window._words ile senkronize (proxy/defineProperty kullanmıyoruz, direkt window._words kullanılacak)
 window._words = window._words || [];
@@ -1656,14 +1672,28 @@ function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textConte
 function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);flDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
 function showFlash(){const w=flDeck[flIdx];flFlipped=false;flWord=w.word;document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · '+w.chapter:'');document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');const art=document.getElementById('fl-art');art.textContent='';art.style.color='';document.getElementById('fl-w').textContent=w.word;document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Plural: '+w.plural:'Tippen zum Umdrehen';document.getElementById('fl-tr').textContent=w.tr;let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;document.getElementById('fl-ex').textContent=ex;}
 function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');
+  const w=flDeck[flIdx];
+  const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
+
+  // Fiil çekimlerini yükle (hafif yüklemede yoktu)
+  if(w.type==='verb' && !w.praesens){
+    azureCall({action:'getWordDetail',_id:w._id,_col:w._col}).then(res=>{
+      if(res.success){
+        Object.assign(w, res.word);
+        let ex='';
+        if(w.perfekt)ex='Perfekt: '+w.perfekt;
+        if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;
+        document.getElementById('fl-ex').textContent=ex;
+      }
+    });
+  }
+
   // Örnek cümleler
   if(flShowSentences){
-    const w=flDeck[flIdx];
     const sentEl=document.getElementById('fl-sentences');
     const listEl=document.getElementById('fl-sent-list');
     sentEl.classList.remove('hidden');
     listEl.innerHTML='<div style="color:var(--txt3);font-size:12px">Wird geladen...</div>';
-    const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
     fetch(window._AZURE_API+'/words?action=getSentences&almancaKelime='+encodeURIComponent(w.word)+'&dil='+anaAil)
       .then(r=>r.json()).then(res=>{
       if(res.success&&res.sentences.length){
@@ -1716,7 +1746,24 @@ function startWrite(grp){wGrp=grp;wTense='praesens';wPron='ich';wProns=['ich','d
 function nounSteps(w){return[{exp:w.word,hint:'Singular schreiben (Artikel + Nomen)'},{exp:w.plural?w.plural:'Kein Plural',hint:"Plural schreiben — kein Plural: 'Kein Plural' schreiben"}];}
 function getExp(w){if(wGrp==='noun'){const steps=nounSteps(w);return steps[wStep]?steps[wStep].exp:'';}if(wGrp==='verb'){if(wTense==='mastar')return w.word;if(wTense==='praesens'){const p=w._pron||wProns[0]||wPron;return w.praesens&&w.praesens[p]?w.praesens[p]:'';}return w[wTense]||'';}return w.word||'';}
 function getQ(w){if(wGrp==='noun'){const steps=nounSteps(w);const s=steps[wStep]||steps[0];return{q:w.tr,hint:s.hint};}if(wGrp==='verb'){if(wTense==='mastar')return{q:w.tr,hint:'Infinitiv-Form'};const tl=TENSES.find(t=>t.id===wTense).lbl;if(wTense==='praesens'){const p=w._pron||wProns[0]||wPron;const pl=PRONOUNS.find(x=>x.id===p);return{q:w.tr,hint:tl+' — '+(pl?pl.lbl:p)+' Form'};}const pl=PRONOUNS.find(p=>p.id===wPron);return{q:w.tr,hint:tl+' — '+(pl?pl.lbl:wPron)+' Form'};}return{q:w.tr,hint:'Auf Deutsch schreiben'};}
-function beginWrite(){const lv=document.getElementById('wf-level').value;const ch=document.getElementById('wf-chapter').value;const pool=applyFilter(grpPool(wGrp),lv,ch);if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}if(wGrp==='verb'&&wTense==='praesens'){const pairs=[];const shuffled=[...pool];for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}shuffled.slice(0,10).forEach(w=>{wProns.forEach(p=>{if(w.praesens&&w.praesens[p])pairs.push({...w,_pron:p});});});if(!pairs.length){alert('Keine Daten für die gewählten Personen!');return;}wDeck=pairs;}else if(wGrp==='verb'&&wTense==='mastar'){const shuffled=[...pool].sort(()=>Math.random()-.5).slice(0,10);wDeck=shuffled;}else if(wGrp==='verb'){const filtered=pool.filter(w=>w[wTense]);if(!filtered.length){alert('Keine Daten für die gewählte Zeitform!');return;}wDeck=filtered.sort(()=>Math.random()-.5).slice(0,10);}else{wDeck=pool.sort(()=>Math.random()-.5).slice(0,10);}wIdx=0;wStep=0;wCorr=0;wWrong=[];document.getElementById('wt-title').textContent=wGrp==='noun'?'Nomen – Schreibtest':wGrp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';go('s-write');showWrite();}
+function beginWrite(){const lv=document.getElementById('wf-level').value;const ch=document.getElementById('wf-chapter').value;const listId=document.getElementById('wf-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(wGrp==='noun'?w.type==='noun':wGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(wGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}
+  // Verb ise çekimleri yükle (hafif yüklemede yoktu)
+  async function loadAndStart(){
+    if(wGrp==='verb'&&wTense!=='mastar'){
+      const verbsWithoutConjugation=pool.filter(w=>!w.praesens);
+      if(verbsWithoutConjugation.length){
+        showLoading('Verbkonjugationen werden geladen...', 30);
+        await Promise.all(verbsWithoutConjugation.slice(0,10).map(async w=>{
+          const res=await azureCall({action:'getWordDetail',_id:w._id,_col:w._col});
+          if(res.success)Object.assign(w,res.word);
+        }));
+        hideLoading();
+      }
+    }
+    if(wGrp==='verb'&&wTense==='praesens'){const pairs=[];const shuffled=[...pool];for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}shuffled.slice(0,10).forEach(w=>{wProns.forEach(p=>{if(w.praesens&&w.praesens[p])pairs.push({...w,_pron:p});});});if(!pairs.length){alert('Keine Daten für die gewählten Personen!');return;}wDeck=pairs;}else if(wGrp==='verb'&&wTense==='mastar'){const shuffled=[...pool].sort(()=>Math.random()-.5).slice(0,10);wDeck=shuffled;}else if(wGrp==='verb'){const filtered=pool.filter(w=>w[wTense]);if(!filtered.length){alert('Keine Daten für die gewählte Zeitform!');return;}wDeck=filtered.sort(()=>Math.random()-.5).slice(0,10);}else{wDeck=pool.sort(()=>Math.random()-.5).slice(0,10);}wIdx=0;wStep=0;wCorr=0;wWrong=[];wShowSentences=document.getElementById('wf-sentences').checked;document.getElementById('wt-title').textContent=wGrp==='noun'?'Nomen – Schreibtest':wGrp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';go('s-write');showWrite();
+  }
+  loadAndStart();
+}
 function showWrite(){const w=wDeck[wIdx];wAnswered=false;const total=wGrp==='noun'?wDeck.length*2:wDeck.length;const curr=wGrp==='noun'?wIdx*2+wStep:wIdx;document.getElementById('wt-ctr').textContent=(curr+1)+'/'+total;document.getElementById('wt-prog').style.width=(curr/total*100)+'%';const inp=document.getElementById('wt-inp');inp.value='';inp.className='winp';inp.disabled=false;document.getElementById('wt-fb').classList.add('hidden');document.getElementById('wt-next').classList.add('hidden');document.getElementById('wt-check').classList.remove('hidden');document.getElementById('wt-warn').classList.remove('show');const exp=getExp(w);resetLBar(exp.length||1);const{q,hint}=getQ(w);document.getElementById('wt-q').textContent=q;document.getElementById('wt-qlbl').textContent='';document.getElementById('wt-hint').textContent=hint;inp.oninput=()=>updateLBar(inp.value,getExp(wDeck[wIdx]));inp.onkeydown=e=>{if(e.key==='Enter'&&!wAnswered)checkWrite();};}
 function resetLBar(len){const b=document.getElementById('wt-lbar');b.innerHTML='';document.getElementById('wt-lpct').textContent='';for(let i=0;i<Math.max(len,1);i++){const s=document.createElement('div');s.className='lseg';b.appendChild(s);}}
 function updateLBar(typed,exp){const b=document.getElementById('wt-lbar');const len=exp.length;while(b.children.length<len){const s=document.createElement('div');s.className='lseg';b.appendChild(s);}while(b.children.length>len)b.removeChild(b.lastChild);const segs=b.querySelectorAll('.lseg');const tl=typed.toLowerCase(),el=exp.toLowerCase();let cor=0;for(let i=0;i<len;i++){const s=segs[i];if(i>=typed.length)s.className='lseg';else if(tl[i]===el[i]){s.className='lseg ok';cor++;}else s.className='lseg no';}document.getElementById('wt-lpct').textContent=typed.length>0?Math.round(cor/len*100)+'% richtig':'';}
