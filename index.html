@@ -1770,6 +1770,7 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
           hideLoading();
         }
         deck=d.filter(w=>w.praesens&&w.praesens[mPron]);
+        console.log('mPron:', mPron, 'd length:', d.length, 'deck length:', deck.length, 'sample praesens:', d[0]?.praesens);
         if(!deck.length){alert('Keine Daten für die gewählten Personen!');return;}
       } else if(mTense==='mastar'){
         deck=d;
