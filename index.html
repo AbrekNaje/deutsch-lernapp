@@ -468,6 +468,155 @@ window.doMasterImport = async function() {
   hideLoading();
 };
 
+// ============================================================
+// WORTLISTEN
+// ============================================================
+let _wordLists = [];
+let _currentListId = null;
+
+window.openWordLists = async function() {
+  go('s-wordlists');
+  showLoading('Wird geladen...', 30);
+  try {
+    const user = window._currentUser;
+    const res = await azureCall({ action: 'getLists', userId: user.uid });
+    if (res.success) {
+      _wordLists = res.lists;
+      renderWordLists();
+      fillListSelects();
+    }
+  } catch(e) { toast('Fehler: ' + e.message, false); }
+  hideLoading();
+};
+
+function renderWordLists() {
+  const el = document.getElementById('wl-list');
+  const empty = document.getElementById('wl-empty');
+  if (!_wordLists.length) { el.innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  el.innerHTML = _wordLists.map(l => `
+    <div class="ncard" onclick="openListDetail(${l.Id},'${l.ListName.replace(/'/g,"\\'")}')">
+      <div style="font-weight:500">${l.ListName}</div>
+      <div style="font-size:12px;color:var(--txt2);margin-top:2px">${l.wordCount} Wörter</div>
+    </div>
+  `).join('');
+}
+
+function fillListSelects() {
+  const opts = '<option value="">Alle Wörter</option>' +
+    _wordLists.map(l => `<option value="${l.Id}">${l.ListName}</option>`).join('');
+  ['ff-list','mf-list','wf-list'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+window.showNewListDialog = function() {
+  const name = prompt('Name der neuen Wortliste:');
+  if (!name || !name.trim()) return;
+  const user = window._currentUser;
+  azureCall({ action: 'saveList', userId: user.uid, listName: name.trim() })
+    .then(res => {
+      if (res.success) {
+        _wordLists.unshift({ Id: res.id, ListName: name.trim(), wordCount: 0 });
+        renderWordLists();
+        fillListSelects();
+        toast('Liste erstellt!');
+      }
+    });
+};
+
+window.openListDetail = async function(listId, listName) {
+  _currentListId = listId;
+  document.getElementById('wld-title').textContent = listName;
+  go('s-wordlist-detail');
+  showLoading('Wird geladen...', 30);
+  try {
+    const res = await azureCall({ action: 'getListWords', listId });
+    if (res.success) {
+      renderListDetail(res.items);
+    }
+  } catch(e) { toast('Fehler: ' + e.message, false); }
+  hideLoading();
+};
+
+function renderListDetail(items) {
+  const el = document.getElementById('wld-words');
+  const empty = document.getElementById('wld-empty');
+  if (!items.length) { el.innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  const words = (window._words||[]).filter(w => items.some(i => i.WordId === w._id));
+  el.innerHTML = words.map(w => `
+    <div class="ncard" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:500">${w.word}</div>
+        <div style="font-size:12px;color:var(--txt2)">${w.tr||''}</div>
+      </div>
+      <button class="btn sm" style="color:var(--danger)" onclick="removeFromList('${w._id}')"><i class="ti ti-x"></i></button>
+    </div>
+  `).join('');
+}
+
+window.removeFromList = async function(wordId) {
+  if (!_currentListId) return;
+  await azureCall({ action: 'removeFromList', listId: _currentListId, wordId });
+  const res = await azureCall({ action: 'getListWords', listId: _currentListId });
+  if (res.success) renderListDetail(res.items);
+  toast('Entfernt');
+};
+
+window.deleteCurrentList = async function() {
+  if (!_currentListId) return;
+  if (!confirm('Liste wirklich löschen?')) return;
+  await azureCall({ action: 'deleteList', listId: _currentListId });
+  _wordLists = _wordLists.filter(l => l.Id !== _currentListId);
+  _currentListId = null;
+  renderWordLists();
+  fillListSelects();
+  go('s-wordlists');
+  toast('Liste gelöscht');
+};
+
+// Kelime kartından listeye ekle
+window.addWordToList = async function(wordId, wordCol) {
+  if (!_wordLists.length) { toast('Keine Wortlisten vorhanden!', false); return; }
+  const listNames = _wordLists.map(l => l.ListName);
+  const idx = _wordLists.length === 1 ? 0 : null;
+  if (idx !== null) {
+    await azureCall({ action: 'addToList', listId: _wordLists[idx].Id, wordId, wordCol });
+    toast('Zur Liste hinzugefügt!');
+    return;
+  }
+  // Birden fazla liste varsa seçim diyaloğu
+  const choice = prompt('In welche Liste? (Nummer eingeben)\n' + 
+    _wordLists.map((l,i) => `${i+1}. ${l.ListName}`).join('\n'));
+  const n = parseInt(choice);
+  if (isNaN(n) || n < 1 || n > _wordLists.length) return;
+  await azureCall({ action: 'addToList', listId: _wordLists[n-1].Id, wordId, wordCol });
+  toast('Zur Liste hinzugefügt!');
+};
+
+// Liste filtresi uygula
+function applyListFilter(pool, listId) {
+  if (!listId) return pool;
+  const list = _wordLists.find(l => l.Id == listId);
+  if (!list) return pool;
+  // Liste kelimelerini async yüklemek yerine, zaten yüklenmiş verileri kullanalım
+  // Liste ID'sine göre filtrele (window._listItems önbelleği)
+  const items = window._listItems && window._listItems[listId];
+  if (!items) return pool;
+  return pool.filter(w => items.some(i => i.WordId === w._id));
+}
+
+// Liste önbelleği
+window._listItems = {};
+
+async function loadListItems(listId) {
+  if (!listId || window._listItems[listId]) return;
+  const res = await azureCall({ action: 'getListWords', listId });
+  if (res.success) window._listItems[listId] = res.items;
+}
+
 window.downloadCSVTemplate = function(grp) {
   let content='', filename='';
   if(grp==='noun'){
@@ -806,8 +955,35 @@ textarea{resize:vertical;min-height:54px}
   </div>
   <button class="btn" onclick="go('s-csv')"><i class="ti ti-upload"></i> CSV importieren</button>
   <button class="btn" onclick="openMasterImport()"><i class="ti ti-database-import"></i> Aus Masterdatenbank importieren</button>
+  <button class="btn" onclick="openWordLists()"><i class="ti ti-list"></i> Wortlisten verwalten</button>
   <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV-Anleitung</button>
   <button class="btn" style="color:var(--danger);border-color:var(--danger)" onclick="doLogout()"><i class="ti ti-logout"></i> Abmelden</button>
+</div>
+
+<!-- WORTLISTEN -->
+<div id="s-wordlists" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-settings')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Wortlisten</h1>
+    <button class="btn sm" onclick="showNewListDialog()"><i class="ti ti-plus"></i></button>
+  </div>
+  <div id="wl-list" style="display:flex;flex-direction:column;gap:8px;padding:8px 0"></div>
+  <div id="wl-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:2rem;font-size:14px">
+    Keine Wortlisten vorhanden.<br>Tippe auf + um eine neue Liste zu erstellen.
+  </div>
+</div>
+
+<!-- WORTLISTE DETAY -->
+<div id="s-wordlist-detail" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-wordlists')"><i class="ti ti-arrow-left"></i></button>
+    <h1 id="wld-title">Liste</h1>
+    <button class="btn sm" style="color:var(--danger)" onclick="deleteCurrentList()"><i class="ti ti-trash"></i></button>
+  </div>
+  <div id="wld-words" style="display:flex;flex-direction:column;gap:6px;padding:4px 0"></div>
+  <div id="wld-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:2rem;font-size:14px">
+    Diese Liste ist leer.<br>Füge Wörter über die Wortliste hinzu.
+  </div>
 </div>
 
 <!-- MASTER İÇE AKTARMA -->
@@ -968,6 +1144,10 @@ textarea{resize:vertical;min-height:54px}
       <div><span class="lbl">Stufe</span><select id="ff-level" onchange="updateFChapters()"><option value="">Alle</option></select></div>
       <div><span class="lbl">Kapitel</span><select id="ff-chapter" onchange="updateFCount()"><option value="">Alle</option></select></div>
     </div>
+    <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="ff-list" onchange="updateFCount()"><option value="">Alle Wörter</option></select></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px;color:var(--txt2)">
+      <input type="checkbox" id="ff-sentences"> Beispielsätze anzeigen
+    </label>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="ff-count"></div>
   </div>
   <button class="btn pri" onclick="beginFlash()"><i class="ti ti-player-play"></i> Starten</button>
@@ -1009,6 +1189,10 @@ textarea{resize:vertical;min-height:54px}
       <div><span class="lbl">Stufe</span><select id="mf-level" onchange="updateMChapters()"><option value="">Alle</option></select></div>
       <div><span class="lbl">Kapitel</span><select id="mf-chapter" onchange="updateMCount()"><option value="">Alle</option></select></div>
     </div>
+    <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="mf-list" onchange="updateMCount()"><option value="">Alle Wörter</option></select></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px;color:var(--txt2)">
+      <input type="checkbox" id="mf-sentences"> Beispielsätze anzeigen
+    </label>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="mf-count"></div>
   </div>
   <div id="ms-noun" class="step-box hidden">
@@ -1059,6 +1243,10 @@ textarea{resize:vertical;min-height:54px}
       <div><span class="lbl">Stufe</span><select id="wf-level" onchange="updateWChapters()"><option value="">Alle</option></select></div>
       <div><span class="lbl">Kapitel</span><select id="wf-chapter" onchange="updateWCount()"><option value="">Alle</option></select></div>
     </div>
+    <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="wf-list" onchange="updateWCount()"><option value="">Alle Wörter</option></select></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px;color:var(--txt2)">
+      <input type="checkbox" id="wf-sentences"> Beispielsätze anzeigen
+    </label>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="wf-count"></div>
   </div>
   <div id="ws-verb" class="step-box hidden">
@@ -1215,8 +1403,8 @@ const PRONOUNS=[{id:'ich',lbl:'ich'},{id:'du',lbl:'du'},{id:'er',lbl:'er/sie/es'
 const TENSES=[{id:'mastar',lbl:'Infinitiv'},{id:'praesens',lbl:'Präsens'},{id:'perfekt',lbl:'Perfekt'},{id:'praeteritum',lbl:'Präteritum'},{id:'futur1',lbl:'Futur I'},{id:'futur2',lbl:'Futur II'},{id:'plusquam',lbl:'Plusquamperf.'}];
 
 let addGrp='noun', listGrp='noun';
-let flDeck=[],flIdx=0,flFlipped=false,flWord='',flGrp='';
-let mGrp='',mDir='de-tr',mTense='mastar',mPron='ich',mDeck=[],mIdx=0,mCorr=0,mWrong=[],mtSpk='';
+let flDeck=[],flIdx=0,flFlipped=false,flWord='',flGrp='',flShowSentences=false;
+let mGrp='',mDir='de-tr',mTense='mastar',mPron='ich',mDeck=[],mIdx=0,mCorr=0,mWrong=[],mtSpk='',mShowSentences=false;
 let wGrp='',wTense='praesens',wPron='ich',wProns=['ich','du','er','wir','ihr','sie'],wDeck=[],wIdx=0,wStep=0,wCorr=0,wWrong=[],wAnswered=false;
 
 // words — window._words ile senkronize (proxy/defineProperty kullanmıyoruz, direkt window._words kullanılacak)
@@ -1429,12 +1617,12 @@ function applyFilter(pool,level,chapter){let r=pool;if(level)r=r.filter(w=>w.lev
 function fillLevels(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const levels=[...new Set(pool.map(w=>w.level).filter(l=>l))].sort();sel.innerHTML='<option value="">Alle</option>'+levels.map(l=>`<option value="${l}">${l}</option>`).join('');if(levels.includes(cur))sel.value=cur;else sel.value='';}
 function fillChapters(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const chapters=[...new Set(pool.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const getNum=s=>{const m=String(s).match(/\d+/);return m?Number(m[0]):NaN;};const na=getNum(a),nb=getNum(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});sel.innerHTML='<option value="">Alle</option>'+chapters.map(c=>`<option value="${c}">${c}</option>`).join('');if(chapters.map(String).includes(String(cur)))sel.value=cur;else sel.value='';}
 
-function updateFChapters(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('ff-chapter',filtered);updateFCount();}
-function updateFCount(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const n=applyFilter(pool,lv,ch).length;document.getElementById('ff-count').textContent=n+' Wörter entsprechen diesem Filter';}
-function updateMChapters(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('mf-chapter',filtered);updateMCount();}
-function updateMCount(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const ch=document.getElementById('mf-chapter').value;const n=applyFilter(pool,lv,ch).length;document.getElementById('mf-count').textContent=n+' Wörter entsprechen diesem Filter';}
-function updateWChapters(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('wf-chapter',filtered);updateWCount();}
-function updateWCount(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const ch=document.getElementById('wf-chapter').value;const n=applyFilter(pool,lv,ch).length;document.getElementById('wf-count').textContent=n+' Wörter entsprechen diesem Filter';}
+function updateFChapters(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('ff-chapter',filtered);const listId=document.getElementById('ff-list')?.value;if(listId)loadListItems(listId).then(()=>updateFCount());else updateFCount();}
+function updateFCount(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list')?.value;let n=applyFilter(pool,lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];n=n.filter(w=>items.some(i=>i.WordId===w._id));}document.getElementById('ff-count').textContent=n.length+' Wörter entsprechen diesem Filter';}
+function updateMChapters(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('mf-chapter',filtered);const listId=document.getElementById('mf-list')?.value;if(listId)loadListItems(listId).then(()=>updateMCount());else updateMCount();}
+function updateMCount(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const ch=document.getElementById('mf-chapter').value;const listId=document.getElementById('mf-list')?.value;let n=applyFilter(pool,lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];n=n.filter(w=>items.some(i=>i.WordId===w._id));}document.getElementById('mf-count').textContent=n.length+' Wörter entsprechen diesem Filter';}
+function updateWChapters(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('wf-chapter',filtered);const listId=document.getElementById('wf-list')?.value;if(listId)loadListItems(listId).then(()=>updateWCount());else updateWCount();}
+function updateWCount(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const ch=document.getElementById('wf-chapter').value;const listId=document.getElementById('wf-list')?.value;let n=applyFilter(pool,lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];n=n.filter(w=>items.some(i=>i.WordId===w._id));}document.getElementById('wf-count').textContent=n.length+' Wörter entsprechen diesem Filter';}
 
 // Kelime ekleme form
 function setGrp(g,el){addGrp=g;document.querySelectorAll('#s-add .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');['noun','verb','adj'].forEach(k=>document.getElementById('f-'+k).classList.toggle('hidden',k!==g));}
@@ -1466,8 +1654,8 @@ function fillAddLookups(){
 function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p4','v-p5','v-p6','v-pf','v-pt','v-f1','v-f2','v-pq','a-w','a-tr','a-ex'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('ai-status').classList.add('hidden');}
 
 // FLASHCARD
-function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen – Lernkarten':grp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Alle</option>';updateFChapters();go('s-fsetup');}
-function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const pool=applyFilter(grpPool(flGrp),lv,ch);if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);flDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
+function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen – Lernkarten':grp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Alle</option>';updateFChapters();fillListSelects();go('s-fsetup');}
+function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool=applyFilter(grpPool(flGrp),lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=pool.filter(w=>items.some(i=>i.WordId===w._id));}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);flDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
 function showFlash(){const w=flDeck[flIdx];flFlipped=false;flWord=w.word;document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · '+w.chapter:'');document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');const art=document.getElementById('fl-art');art.textContent='';art.style.color='';document.getElementById('fl-w').textContent=w.word;document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Plural: '+w.plural:'Tippen zum Umdrehen';document.getElementById('fl-tr').textContent=w.tr;let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;document.getElementById('fl-ex').textContent=ex;}
 function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');}
 function rateFlash(ok){const w=flDeck[flIdx];const o=(window._words||[]).find(x=>x._id===w._id);if(o){if(ok){o.correct=(o.correct||0)+1;o.streak=(o.streak||0)+1;}else{o.wrong=(o.wrong||0)+1;o.streak=0;}updateStats(o);}flIdx++;if(flIdx>=flDeck.length){updateHome();go('s-fsetup');toast('Kartenstapel abgeschlossen!');}else showFlash();}
@@ -1480,7 +1668,7 @@ function buildTenses(cid,forWrite){const c=document.getElementById(cid);c.innerH
 function buildProns(cid,forWrite){const c=document.getElementById(cid);c.innerHTML='';const isDisabled=forWrite?(wTense==='mastar'):(mTense==='mastar');PRONOUNS.forEach(p=>{const b=document.createElement('button');if(forWrite){const active=wProns.includes(p.id);b.className='pron-btn'+(active?' active':'');b.disabled=isDisabled;b.style.opacity=isDisabled?'0.4':'1';b.textContent=p.lbl;b.onclick=()=>{if(isDisabled)return;if(wProns.includes(p.id)){if(wProns.length>1)wProns=wProns.filter(x=>x!==p.id);}else{wProns.push(p.id);}buildProns(cid,true);};}else{b.className='pron-btn'+(p.id===mPron?' active':'');b.disabled=isDisabled;b.style.opacity=isDisabled?'0.4':'1';b.textContent=p.lbl;b.onclick=()=>{if(isDisabled)return;document.querySelectorAll('#'+cid+' .pron-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');mPron=p.id;};}c.appendChild(b);});}
 function pickMulti(grp){mGrp=grp;mTense='mastar';mPron='ich';mDir='de-tr';document.getElementById('ms-title').textContent=grp==='noun'?'Nomen – Multiple-Choice-Test':grp==='verb'?'Verben – Multiple-Choice-Test':'Adjektiv – Multiple-Choice-Test';['ms-noun','ms-verb','ms-adj'].forEach(id=>document.getElementById(id).classList.add('hidden'));if(grp==='noun'){document.getElementById('ms-noun').classList.remove('hidden');setMDir('de-tr');}else if(grp==='verb'){document.getElementById('ms-verb').classList.remove('hidden');buildTenses('ts-multi',false);buildProns('ps-multi',false);}else{document.getElementById('ms-adj').classList.remove('hidden');setMDir('de-tr');}fillLevels('mf-level',grpPool(grp));document.getElementById('mf-chapter').innerHTML='<option value="">Alle</option>';updateMChapters();go('s-msetup');}
 function setMDir(d){mDir=d;['ms-de-tr','ms-tr-de','ms-adj-dt','ms-adj-td','ms-verb-dt','ms-verb-td'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('pri');});let ak;if(mGrp==='adj')ak=d==='de-tr'?'ms-adj-dt':'ms-adj-td';else if(mGrp==='verb')ak=d==='de-tr'?'ms-verb-dt':'ms-verb-td';else ak=d==='de-tr'?'ms-de-tr':'ms-tr-de';const el=document.getElementById(ak);if(el)el.classList.add('pri');}
-function beginMulti(){const lv=document.getElementById('mf-level').value;const ch=document.getElementById('mf-chapter').value;const d=applyFilter(grpPool(mGrp),lv,ch);if(!d.length){alert('Keine Wörter für diesen Filter!');return;}let deck=d;if(mGrp==='verb'){if(mTense==='mastar'){deck=d;}else if(mTense==='praesens'){deck=d.filter(w=>w.praesens&&w.praesens[mPron]);}else{deck=d.filter(w=>w[mTense]);}if(!deck.length){alert('Keine Daten für die gewählte Zeitform!');return;}}
+function beginMulti(){const lv=document.getElementById('mf-level').value;const ch=document.getElementById('mf-chapter').value;const listId=document.getElementById('mf-list').value;let d=applyFilter(grpPool(mGrp),lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];d=d.filter(w=>items.some(i=>i.WordId===w._id));}if(!d.length){alert('Keine Wörter für diesen Filter!');return;}let deck=d;if(mGrp==='verb'){if(mTense==='mastar'){deck=d;}else if(mTense==='praesens'){deck=d.filter(w=>w.praesens&&w.praesens[mPron]);}else{deck=d.filter(w=>w[mTense]);}if(!deck.length){alert('Keine Daten für die gewählte Zeitform!');return;}}mShowSentences=document.getElementById('mf-sentences').checked;
   // Ağırlığa göre puanla — yüksek puan = öncelikli, ama her kelime sadece bir kez
   const scored=deck.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));
   scored.sort((a,b)=>b.score-a.score);
@@ -1514,7 +1702,7 @@ function renderList(){
   const lv=document.getElementById('lf-lv').value;
   const filtered=w.filter(x=>{const ok=listGrp==='noun'?x.type==='noun':listGrp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron');return ok&&(!lv||x.level===lv);});
   document.getElementById('list-empty').classList.toggle('hidden',filtered.length>0);
-  document.getElementById('wlist').innerHTML=filtered.map(x=>'<div class="wli"><div class="wli-l"><div class="wli-w">'+x.word+'</div><div class="wli-t">'+(x.tr||'')+(x.plural?' · Pl: '+x.plural:'')+'</div></div><span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac)">'+(x.level||'')+'</span><button class="delbtn" onclick="delWord(\''+x._id+'\',\''+x._col+'\')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>').join('');
+  document.getElementById('wlist').innerHTML=filtered.map(x=>`<div class="wli"><div class="wli-l"><div class="wli-w">${x.word}</div><div class="wli-t">${x.tr||''}${x.plural?' · Pl: '+x.plural:''}</div></div><span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac)">${x.level||''}</span><button class="btn sm" style="font-size:11px;padding:3px 7px" onclick="addWordToList('${x._id}','${x._col}')" title="Zur Wortliste hinzufügen"><i class="ti ti-list-plus"></i></button><button class="delbtn" onclick="delWord('${x._id}','${x._col}')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>`).join('');
 }
 
 // ARAMA
