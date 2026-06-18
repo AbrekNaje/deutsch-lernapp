@@ -1675,15 +1675,33 @@ function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById(
   const w=flDeck[flIdx];
   const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
 
-  // Fiil çekimlerini yükle (hafif yüklemede yoktu)
-  if(w.type==='verb' && !w.praesens){
+  // Fiil çekimlerini göster (zaten varsa) veya yükle
+  function updateEx(){
+    let ex='';
+    if(w.type==='verb'){
+      if(w.praesens){
+        const p=w.praesens;
+        ex=`ich ${p.ich||''} · du ${p.du||''} · er ${p.er||''}\nwir ${p.wir||''} · ihr ${p.ihr||''} · sie ${p.sie||''}`;
+        if(w.perfekt)ex+='\nPerfekt: '+w.perfekt;
+        if(w.praeteritum)ex+='\nPrät.: '+w.praeteritum;
+      } else {
+        ex='Wird geladen...';
+      }
+    }
+    if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;
+    document.getElementById('fl-ex').textContent=ex;
+  }
+
+  updateEx();
+
+  if(w.type==='verb'&&!w.praesens){
     azureCall({action:'getWordDetail',_id:w._id,_col:w._col}).then(res=>{
       if(res.success){
-        Object.assign(w, res.word);
-        let ex='';
-        if(w.perfekt)ex='Perfekt: '+w.perfekt;
-        if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;
-        document.getElementById('fl-ex').textContent=ex;
+        Object.assign(w,res.word);
+        // window._words içindeki kelimeyi de güncelle
+        const orig=(window._words||[]).find(x=>x._id===w._id);
+        if(orig)Object.assign(orig,res.word);
+        updateEx();
       }
     });
   }
@@ -1739,7 +1757,7 @@ function answerMulti(btn,correct,w){document.querySelectorAll('#mt-opts .opt').f
     });
   } else if(sentEl){sentEl.classList.add('hidden');}
 }
-function nextMulti(){mIdx++;if(mIdx>=mDeck.length)showResult(mCorr,mDeck.length,mWrong,()=>beginMulti());else showMulti();}
+function nextMulti(){mIdx++;const sentEl=document.getElementById('mt-sentences');if(sentEl){sentEl.classList.add('hidden');sentEl.innerHTML='';}if(mIdx>=mDeck.length)showResult(mCorr,mDeck.length,mWrong,()=>beginMulti());else showMulti();}
 
 // YAZILI
 function startWrite(grp){wGrp=grp;wTense='praesens';wPron='ich';wProns=['ich','du','er','wir','ihr','sie'];document.getElementById('ws-title').textContent=grp==='noun'?'Nomen – Schreibtest':grp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';['ws-verb','ws-noun','ws-adj'].forEach(id=>document.getElementById(id).classList.add('hidden'));if(grp==='verb'){document.getElementById('ws-verb').classList.remove('hidden');buildTenses('ts-write',true);buildProns('ps-write',true);}else if(grp==='noun'){document.getElementById('ws-noun').classList.remove('hidden');}else{document.getElementById('ws-adj').classList.remove('hidden');}fillLevels('wf-level',grpPool(grp));document.getElementById('wf-chapter').innerHTML='<option value="">Alle</option>';updateWChapters();if(window.fillListSelects)window.fillListSelects();go('s-wsetup');}
