@@ -317,6 +317,14 @@ window.saveWord = async function() {
     if(!wd){toast('Bitte Wort eingeben',false);return;}
     Object.assign(w,{type:document.getElementById('a-type').value,word:wd,tr:document.getElementById('a-tr').value.trim(),extra:document.getElementById('a-ex').value.trim(),level:getLookupVal('a-lv'),chapter:getLookupVal('a-ch')});
   }
+  // Örnek cümleleri topla
+  const sentences=[];
+  for(let i=1;i<=3;i++){
+    const de=document.getElementById('ex-de-'+i).value.trim();
+    const tr=document.getElementById('ex-tr-'+i).value.trim();
+    if(de)sentences.push({de,tr});
+  }
+  if(sentences.length)w.sentences=sentences;
   showLoading('Wird gespeichert...');
   try {
     const res = await azureCall({ action: 'save', userId: user.uid, word: w });
@@ -423,6 +431,10 @@ window.aiFill = async function() {
     if(addGrp==='noun'){if(parsed.tekil)document.getElementById('n-w').value=parsed.tekil;if(parsed.cogul!==undefined)document.getElementById('n-pl').value=parsed.cogul;if(parsed.turkce)document.getElementById('n-tr').value=parsed.turkce;}
     else if(addGrp==='verb'){if(parsed.mastar)document.getElementById('v-w').value=parsed.mastar;if(parsed.turkce)document.getElementById('v-tr').value=parsed.turkce;if(parsed.ich)document.getElementById('v-p1').value=parsed.ich;if(parsed.du)document.getElementById('v-p2').value=parsed.du;if(parsed.er)document.getElementById('v-p3').value=parsed.er;if(parsed.wir)document.getElementById('v-p4').value=parsed.wir;if(parsed.ihr)document.getElementById('v-p5').value=parsed.ihr;if(parsed.sie)document.getElementById('v-p6').value=parsed.sie;if(parsed.perfekt)document.getElementById('v-pf').value=parsed.perfekt;if(parsed.praeteritum)document.getElementById('v-pt').value=parsed.praeteritum;if(parsed.futur1)document.getElementById('v-f1').value=parsed.futur1;if(parsed.futur2)document.getElementById('v-f2').value=parsed.futur2;if(parsed.plusquamperfekt)document.getElementById('v-pq').value=parsed.plusquamperfekt;}
     else{if(parsed.kelime)document.getElementById('a-w').value=parsed.kelime;if(parsed.turkce)document.getElementById('a-tr').value=parsed.turkce;if(parsed.ekbilgi)document.getElementById('a-ex').value=parsed.ekbilgi;if(parsed.tur)document.getElementById('a-type').value=parsed.tur==='pron'?'pron':'adj';}
+    // Örnek cümleleri doldur
+    if(parsed.cumle1_de){document.getElementById('ex-de-1').value=parsed.cumle1_de;document.getElementById('ex-tr-1').value=parsed.cumle1_tr||'';}
+    if(parsed.cumle2_de){document.getElementById('ex-de-2').value=parsed.cumle2_de;document.getElementById('ex-tr-2').value=parsed.cumle2_tr||'';}
+    if(parsed.cumle3_de){document.getElementById('ex-de-3').value=parsed.cumle3_de;document.getElementById('ex-tr-3').value=parsed.cumle3_tr||'';}
     status.textContent='✓ Felder ausgefüllt — bitte prüfen und speichern';status.style.color='var(--success)';
   }catch(e){status.textContent='Fehler: '+e.message;status.style.color='var(--danger)';}
   btn.disabled=false;btn.innerHTML='<i class="ti ti-sparkles"></i> Mit KI ausfüllen';
@@ -707,6 +719,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .lbl{font-size:15px;color:var(--txt2);display:block;margin-bottom:4px;margin-top:8px}
 input[type="checkbox"],input[type="radio"]{width:18px;height:18px;border-radius:3px!important;accent-color:var(--ac);cursor:pointer;flex-shrink:0;appearance:auto}
 label{cursor:pointer;display:flex;align-items:center;gap:8px}
+.ex-sent-row input{width:100%;display:block}
 input,select,textarea{width:100%;padding:9px 12px;border:.5px solid var(--brd2);border-radius:var(--rad);font-size:16px;background:var(--bg);color:var(--txt);font-family:inherit}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acm)}
 textarea{resize:vertical;min-height:54px}
@@ -1137,6 +1150,23 @@ textarea{resize:vertical;min-height:54px}
     <div class="grid2" style="margin-top:8px">
       <div><span class="lbl">Stufe</span><div class="lookup-wrap"><select id="a-lv" onchange="onLookupChange('a-lv','a-lv-new')"></select><div class="lookup-new" id="a-lv-new"><input type="text" id="a-lv-inp" placeholder="Neue Stufe..."><button class="btn pri" onclick="addLookupVal('a-lv','a-lv-new','a-lv-inp','level')">+</button></div></div></div>
       <div><span class="lbl">Kapitel</span><div class="lookup-wrap"><select id="a-ch" onchange="onLookupChange('a-ch','a-ch-new')"></select><div class="lookup-new" id="a-ch-new"><input type="text" id="a-ch-inp" placeholder="Neues Kapitel..."><button class="btn pri" onclick="addLookupVal('a-ch','a-ch-new','a-ch-inp','chapter')">+</button></div></div></div>
+    </div>
+  </div>
+  <div class="section" style="margin-top:12px">
+    <div class="section-title">Beispielsätze (optional)</div>
+    <div id="ex-sentences">
+      <div class="ex-sent-row" style="margin-bottom:8px">
+        <input type="text" id="ex-de-1" placeholder="Deutscher Satz...">
+        <input type="text" id="ex-tr-1" placeholder="Übersetzung..." style="margin-top:4px">
+      </div>
+      <div class="ex-sent-row" style="margin-bottom:8px">
+        <input type="text" id="ex-de-2" placeholder="Deutscher Satz...">
+        <input type="text" id="ex-tr-2" placeholder="Übersetzung..." style="margin-top:4px">
+      </div>
+      <div class="ex-sent-row" style="margin-bottom:8px">
+        <input type="text" id="ex-de-3" placeholder="Deutscher Satz...">
+        <input type="text" id="ex-tr-3" placeholder="Übersetzung..." style="margin-top:4px">
+      </div>
     </div>
   </div>
   <div class="brow">
@@ -1665,7 +1695,7 @@ function fillAddLookups(){
     if(nd)nd.classList.toggle('show',s.value==='__new__');
   });
 }
-function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p4','v-p5','v-p6','v-pf','v-pt','v-f1','v-f2','v-pq','a-w','a-tr','a-ex'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('ai-status').classList.add('hidden');}
+function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p4','v-p5','v-p6','v-pf','v-pt','v-f1','v-f2','v-pq','a-w','a-tr','a-ex','ex-de-1','ex-tr-1','ex-de-2','ex-tr-2','ex-de-3','ex-tr-3'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('ai-status').classList.add('hidden');}
 
 // FLASHCARD
 function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen – Lernkarten':grp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Alle</option>';updateFChapters();if(window.fillListSelects)window.fillListSelects();go('s-fsetup');}
