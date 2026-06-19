@@ -1777,9 +1777,10 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
           hideLoading();
         }
         // d'yi window._words'den yeniden oluştur (güncel praesens ile)
-        const dFresh=(window._words||[]).filter(w=>d.some(x=>x._id===w._id));
+        const idsInD = new Set(d.map(w=>w._id));
+        const dFresh=(window._words||[]).filter(w=>idsInD.has(w._id));
         deck=dFresh.filter(w=>w.praesens&&w.praesens[mPron]);
-        console.log('mPron:',mPron,'dFresh:',dFresh.length,'deck:',deck.length,'sample:',dFresh[0]?.praesens);
+        console.log('mPron:',mPron,'dFresh:',dFresh.length,'deck:',deck.length,'sample word:',dFresh[0]);
         if(!deck.length){alert('Keine Daten für die gewählten Personen!');return;}
       } else if(mTense==='mastar'){
         deck=d;
