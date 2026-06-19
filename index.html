@@ -1753,6 +1753,7 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
     if(mGrp==='verb'){
       if(mTense==='praesens'){
         const missing=d.filter(w=>!w.praesens);
+        console.log('missing count:', missing.length, 'first missing:', missing[0]?._id, 'first d praesens:', d[0]?.praesens);
         if(missing.length){
           showLoading('Konjugationen werden geladen...',20);
           for(let i=0;i<missing.length&&i<50;i++){
