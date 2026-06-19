@@ -500,6 +500,7 @@ window.doMasterImport = async function() {
 // WORTLISTEN
 // ============================================================
 let _wordLists = [];
+window._wordLists = _wordLists;
 let _currentListId = null;
 
 window.openWordLists = async function() {
@@ -509,7 +510,7 @@ window.openWordLists = async function() {
     const user = window._currentUser;
     const res = await azureCall({ action: 'getLists', userId: user.uid });
     if (res.success) {
-      _wordLists = res.lists;
+      _wordLists.length = 0; _wordLists.push(...res.lists);
       renderWordLists();
       fillListSelects();
     }
@@ -597,7 +598,7 @@ window.deleteCurrentList = async function() {
   if (!_currentListId) return;
   if (!confirm('Liste wirklich löschen?')) return;
   await azureCall({ action: 'deleteList', listId: _currentListId });
-  _wordLists = _wordLists.filter(l => l.Id !== _currentListId);
+  const idx2=_wordLists.findIndex(l=>l.Id===_currentListId);if(idx2>=0)_wordLists.splice(idx2,1);
   _currentListId = null;
   renderWordLists();
   fillListSelects();
@@ -1485,12 +1486,12 @@ function go(id){
     // Tüm listeleri ve içeriklerini yükle (favori gösterimi için)
     (async()=>{
       const user=window._currentUser;
-      if(user && !_wordLists.length){
+      if(user && !window._wordLists.length){
         const res=await azureCall({action:'getLists',userId:user.uid});
-        if(res.success)_wordLists=res.lists;
+        if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
       }
       // Her listenin içeriğini de yükle
-      await Promise.all(_wordLists.map(l=>loadListItems(l.Id)));
+      await Promise.all(window._wordLists.map(l=>loadListItems(l.Id)));
       renderList();
     })();
     renderList();
@@ -1923,7 +1924,7 @@ function showResult(corr,total,wrongArr,retryFn){go('s-result');document.getElem
 function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');fillLevels('lf-lv',grpPool(g));updateLfChapters();renderList();}
 function updateLfChapters(){const pool=grpPool(listGrp);const lv=document.getElementById('lf-lv').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('lf-ch',filtered);}
 function getWordListName(wordId){
-  for(const list of _wordLists){
+  for(const list of window._wordLists){
     const items=window._listItems&&window._listItems[list.Id];
     if(items&&items.some(i=>i.WordId===wordId))return list.ListName;
   }
@@ -1934,7 +1935,7 @@ async function toggleFavorite(wordId,wordCol){
   const currentList=getWordListName(wordId);
   if(currentList){
     // Kaldır — hangi listede olduğunu bul ve çıkar
-    for(const list of _wordLists){
+    for(const list of window._wordLists){
       const items=window._listItems&&window._listItems[list.Id];
       if(items&&items.some(i=>i.WordId===wordId)){
         await azureCall({action:'removeFromList',listId:list.Id,wordId});
@@ -1944,16 +1945,16 @@ async function toggleFavorite(wordId,wordCol){
     }
   } else {
     // Ekle — "List 1" var mı kontrol et, yoksa oluştur
-    if(!_wordLists.length){
+    if(!window._wordLists.length){
       const user=window._currentUser;
       const res=await azureCall({action:'getLists',userId:user.uid});
-      if(res.success)_wordLists=res.lists;
+      if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
     }
-    let list1=_wordLists.find(l=>l.ListName==='List 1');
+    let list1=window._wordLists.find(l=>l.ListName==='List 1');
     if(!list1){
       const user=window._currentUser;
       const res=await azureCall({action:'saveList',userId:user.uid,listName:'List 1'});
-      if(res.success){list1={Id:res.id,ListName:'List 1',wordCount:0};_wordLists.unshift(list1);}
+      if(res.success){list1={Id:res.id,ListName:'List 1',wordCount:0};window._wordLists.unshift(list1);}
     }
     await azureCall({action:'addToList',listId:list1.Id,wordId,wordCol});
     if(!window._listItems[list1.Id])window._listItems[list1.Id]=[];
