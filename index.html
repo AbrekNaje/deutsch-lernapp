@@ -607,23 +607,7 @@ window.deleteCurrentList = async function() {
 };
 
 // Kelime kartından listeye ekle
-window.addWordToList = async function(wordId, wordCol) {
-  if (!_wordLists.length) { toast('Keine Wortlisten vorhanden!', false); return; }
-  const listNames = _wordLists.map(l => l.ListName);
-  const idx = _wordLists.length === 1 ? 0 : null;
-  if (idx !== null) {
-    await azureCall({ action: 'addToList', listId: _wordLists[idx].Id, wordId, wordCol });
-    toast('Zur Liste hinzugefügt!');
-    return;
-  }
-  // Birden fazla liste varsa seçim diyaloğu
-  const choice = prompt('In welche Liste? (Nummer eingeben)\n' + 
-    _wordLists.map((l,i) => `${i+1}. ${l.ListName}`).join('\n'));
-  const n = parseInt(choice);
-  if (isNaN(n) || n < 1 || n > _wordLists.length) return;
-  await azureCall({ action: 'addToList', listId: _wordLists[n-1].Id, wordId, wordCol });
-  toast('Zur Liste hinzugefügt!');
-};
+// addWordToList ve liste seçimi normal script bloğunda openListPicker ile yönetiliyor
 
 // Liste filtresi uygula
 function applyListFilter(pool, listId) {
@@ -818,6 +802,19 @@ textarea{resize:vertical;min-height:54px}
       <div id="loading-bar" style="height:100%;background:var(--ac);border-radius:99px;width:0%;transition:width 0.4s ease"></div>
     </div>
     <div style="font-size:13px;color:var(--txt2);margin-top:4px" id="loading-pct">0%</div>
+  </div>
+</div>
+
+<!-- LİSTE SEÇİM MODAL -->
+<div id="list-picker-overlay" class="loading-overlay">
+  <div class="loading-box" style="width:280px;max-width:85vw;align-items:stretch;text-align:left;padding:1.25rem">
+    <div style="font-size:16px;font-weight:500;color:var(--txt);margin-bottom:4px">Wortliste wählen</div>
+    <div id="lp-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin:8px 0"></div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <input type="text" id="lp-new-name" placeholder="Neue Liste..." style="flex:1">
+      <button class="btn pri sm" onclick="createListFromPicker()"><i class="ti ti-plus"></i></button>
+    </div>
+    <button class="btn" style="margin-top:10px" onclick="closeListPicker()">Abbrechen</button>
   </div>
 </div>
 
@@ -1923,6 +1920,70 @@ function showResult(corr,total,wrongArr,retryFn){go('s-result');document.getElem
 // KELİME LİSTESİ
 function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');fillLevels('lf-lv',grpPool(g));updateLfChapters();renderList();}
 function updateLfChapters(){const pool=grpPool(listGrp);const lv=document.getElementById('lf-lv').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('lf-ch',filtered);}
+let _lpWordId=null,_lpWordCol=null;
+
+window.openListPicker=async function(wordId,wordCol){
+  _lpWordId=wordId;_lpWordCol=wordCol;
+  const user=window._currentUser;
+  if(!window._wordLists.length){
+    const res=await window._azureCall({action:'getLists',userId:user.uid});
+    if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
+  }
+  await Promise.all(window._wordLists.map(l=>loadListItems(l.Id)));
+  renderListPicker();
+  document.getElementById('list-picker-overlay').classList.add('show');
+};
+
+function renderListPicker(){
+  const el=document.getElementById('lp-list');
+  if(!window._wordLists.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--txt2);text-align:center;padding:12px">Noch keine Listen. Erstelle eine neue!</div>';
+    return;
+  }
+  el.innerHTML=window._wordLists.map(l=>{
+    const items=window._listItems[l.Id]||[];
+    const inList=items.some(i=>i.WordId===_lpWordId);
+    return `<div onclick="selectListForWord(${l.Id})" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--rad);border:.5px solid var(--brd);cursor:pointer;background:${inList?'var(--acl)':'var(--bg)'}">
+      <span style="font-size:14px;color:${inList?'var(--ac)':'var(--txt)'}">${l.ListName}</span>
+      ${inList?'<i class="ti ti-check" style="color:var(--ac)"></i>':''}
+    </div>`;
+  }).join('');
+}
+
+window.selectListForWord=async function(listId){
+  const items=window._listItems[listId]||[];
+  const inList=items.some(i=>i.WordId===_lpWordId);
+  if(inList){
+    await window._azureCall({action:'removeFromList',listId,wordId:_lpWordId});
+    window._listItems[listId]=items.filter(i=>i.WordId!==_lpWordId);
+  } else {
+    await window._azureCall({action:'addToList',listId,wordId:_lpWordId,wordCol:_lpWordCol});
+    if(!window._listItems[listId])window._listItems[listId]=[];
+    window._listItems[listId].push({WordId:_lpWordId,WordCol:_lpWordCol});
+  }
+  renderListPicker();
+  renderList();
+};
+
+window.createListFromPicker=async function(){
+  const name=document.getElementById('lp-new-name').value.trim();
+  if(!name)return;
+  const user=window._currentUser;
+  const res=await window._azureCall({action:'saveList',userId:user.uid,listName:name});
+  if(res.success){
+    const newList={Id:res.id,ListName:name,wordCount:0};
+    window._wordLists.unshift(newList);
+    window._listItems[res.id]=[];
+    document.getElementById('lp-new-name').value='';
+    renderListPicker();
+  }
+};
+
+window.closeListPicker=function(){
+  document.getElementById('list-picker-overlay').classList.remove('show');
+  renderList();
+};
+
 function getWordListName(wordId){
   for(const list of window._wordLists){
     const items=window._listItems&&window._listItems[list.Id];
@@ -1930,37 +1991,9 @@ function getWordListName(wordId){
   }
   return null;
 }
+
 async function toggleFavorite(wordId,wordCol){
-  // Zaten bir listede mi kontrol et
-  const currentList=getWordListName(wordId);
-  if(currentList){
-    // Kaldır — hangi listede olduğunu bul ve çıkar
-    for(const list of window._wordLists){
-      const items=window._listItems&&window._listItems[list.Id];
-      if(items&&items.some(i=>i.WordId===wordId)){
-        await window._azureCall({action:'removeFromList',listId:list.Id,wordId});
-        window._listItems[list.Id]=items.filter(i=>i.WordId!==wordId);
-        break;
-      }
-    }
-  } else {
-    // Ekle — "List 1" var mı kontrol et, yoksa oluştur
-    if(!window._wordLists.length){
-      const user=window._currentUser;
-      const res=await window._azureCall({action:'getLists',userId:user.uid});
-      if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
-    }
-    let list1=window._wordLists.find(l=>l.ListName==='List 1');
-    if(!list1){
-      const user=window._currentUser;
-      const res=await window._azureCall({action:'saveList',userId:user.uid,listName:'List 1'});
-      if(res.success){list1={Id:res.id,ListName:'List 1',wordCount:0};window._wordLists.unshift(list1);}
-    }
-    await window._azureCall({action:'addToList',listId:list1.Id,wordId,wordCol});
-    if(!window._listItems[list1.Id])window._listItems[list1.Id]=[];
-    window._listItems[list1.Id].push({WordId:wordId,WordCol:wordCol});
-  }
-  renderList();
+  openListPicker(wordId,wordCol);
 }
 window.toggleFavorite=toggleFavorite;
 
@@ -1978,7 +2011,7 @@ function renderList(){
     const listName=getWordListName(x._id);
     const isFav=listName!==null;
     return `<div class="wli"><div class="wli-l"><div class="wli-w">${x.word}</div><div class="wli-t">${x.tr||''}${x.plural?' · Pl: '+x.plural:''}</div></div>
-      ${listName?`<span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac);cursor:pointer" onclick="addWordToList('${x._id}','${x._col}')" title="Liste ändern">${listName}</span>`:''}
+      ${listName?`<span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac);cursor:pointer" onclick="openListPicker('${x._id}','${x._col}')" title="Liste ändern">${listName}</span>`:''}
       <button class="btn sm" style="font-size:18px;padding:3px 7px;color:${isFav?'#E0457B':'var(--txt3)'}" onclick="toggleFavorite('${x._id}','${x._col}')" title="Favorit"><i class="ti ${isFav?'ti-heart-filled':'ti-heart'}"></i></button>
       <button class="delbtn" onclick="delWord('${x._id}','${x._col}')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>`;
   }).join('');
