@@ -1362,7 +1362,11 @@ textarea{resize:vertical;min-height:54px}
     <button class="gtab v" onclick="setListGrp('verb',this)">Verben</button>
     <button class="gtab a" onclick="setListGrp('adj',this)">Adjektiv</button>
   </div>
-  <select id="lf-lv" onchange="renderList()"><option value="">Alle Stufen</option></select>
+  <div class="grid2">
+    <select id="lf-lv" onchange="updateLfChapters();renderList()"><option value="">Alle Stufen</option></select>
+    <select id="lf-ch" onchange="renderList()"><option value="">Alle Kapitel</option></select>
+  </div>
+  <label style="margin:8px 0"><input type="checkbox" id="lf-fav" onchange="renderList()"> Nur Favoriten <i class="ti ti-heart-filled" style="color:#E0457B;font-size:14px"></i></label>
   <div id="wlist"></div>
   <div id="list-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:2rem;font-size:14px">Keine Wörter in dieser Gruppe.</div>
 </div>
@@ -1475,7 +1479,22 @@ function go(id){
   document.getElementById(id).classList.add('active');
   if(id==='s-home')updateHome();
   if(id==='s-add'){fillAddLookups();}
-  if(id==='s-list'){fillLevels('lf-lv',grpPool(listGrp));renderList();}
+  if(id==='s-list'){
+    fillLevels('lf-lv',grpPool(listGrp));
+    updateLfChapters();
+    // Tüm listeleri ve içeriklerini yükle (favori gösterimi için)
+    (async()=>{
+      const user=window._currentUser;
+      if(user && !_wordLists.length){
+        const res=await azureCall({action:'getLists',userId:user.uid});
+        if(res.success)_wordLists=res.lists;
+      }
+      // Her listenin içeriğini de yükle
+      await Promise.all(_wordLists.map(l=>loadListItems(l.Id)));
+      renderList();
+    })();
+    renderList();
+  }
   if(id==='s-search'){document.getElementById('search-inp').value='';doSearch();setTimeout(()=>document.getElementById('search-inp').focus(),100);}
   if(id==='s-settings'){updateSettingsProfile();}
 }
@@ -1901,13 +1920,67 @@ function finWrite(){const total=wGrp==='noun'?wDeck.length*2:wDeck.length;showRe
 function showResult(corr,total,wrongArr,retryFn){go('s-result');document.getElementById('res-pct').textContent=Math.round(corr/total*100)+'%';document.getElementById('res-sub').textContent=corr+' / '+total+' richtig';document.getElementById('res-retry').onclick=retryFn;const el=document.getElementById('res-wrong');if(!wrongArr.length){el.innerHTML='<div style="font-size:13px;color:var(--success)">Alle Fragen richtig beantwortet!</div>';}else{el.innerHTML=wrongArr.map(w=>'<div style="font-size:13px;padding:4px 0;border-bottom:.5px solid var(--brd)">'+w.word+' = '+w.tr+'</div>').join('');}updateHome();}
 
 // KELİME LİSTESİ
-function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');fillLevels('lf-lv',grpPool(g));renderList();}
+function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');fillLevels('lf-lv',grpPool(g));updateLfChapters();renderList();}
+function updateLfChapters(){const pool=grpPool(listGrp);const lv=document.getElementById('lf-lv').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('lf-ch',filtered);}
+function getWordListName(wordId){
+  for(const list of _wordLists){
+    const items=window._listItems&&window._listItems[list.Id];
+    if(items&&items.some(i=>i.WordId===wordId))return list.ListName;
+  }
+  return null;
+}
+async function toggleFavorite(wordId,wordCol){
+  // Zaten bir listede mi kontrol et
+  const currentList=getWordListName(wordId);
+  if(currentList){
+    // Kaldır — hangi listede olduğunu bul ve çıkar
+    for(const list of _wordLists){
+      const items=window._listItems&&window._listItems[list.Id];
+      if(items&&items.some(i=>i.WordId===wordId)){
+        await azureCall({action:'removeFromList',listId:list.Id,wordId});
+        window._listItems[list.Id]=items.filter(i=>i.WordId!==wordId);
+        break;
+      }
+    }
+  } else {
+    // Ekle — "List 1" var mı kontrol et, yoksa oluştur
+    if(!_wordLists.length){
+      const user=window._currentUser;
+      const res=await azureCall({action:'getLists',userId:user.uid});
+      if(res.success)_wordLists=res.lists;
+    }
+    let list1=_wordLists.find(l=>l.ListName==='List 1');
+    if(!list1){
+      const user=window._currentUser;
+      const res=await azureCall({action:'saveList',userId:user.uid,listName:'List 1'});
+      if(res.success){list1={Id:res.id,ListName:'List 1',wordCount:0};_wordLists.unshift(list1);}
+    }
+    await azureCall({action:'addToList',listId:list1.Id,wordId,wordCol});
+    if(!window._listItems[list1.Id])window._listItems[list1.Id]=[];
+    window._listItems[list1.Id].push({WordId:wordId,WordCol:wordCol});
+  }
+  renderList();
+}
+window.toggleFavorite=toggleFavorite;
+
 function renderList(){
   const w=window._words||[];
   const lv=document.getElementById('lf-lv').value;
-  const filtered=w.filter(x=>{const ok=listGrp==='noun'?x.type==='noun':listGrp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron');return ok&&(!lv||x.level===lv);});
+  const ch=document.getElementById('lf-ch')?.value||'';
+  const favOnly=document.getElementById('lf-fav')?.checked||false;
+  let filtered=w.filter(x=>{const ok=listGrp==='noun'?x.type==='noun':listGrp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron');return ok&&(!lv||x.level===lv)&&(!ch||x.chapter===ch);});
+  if(favOnly){
+    filtered=filtered.filter(x=>getWordListName(x._id)!==null);
+  }
   document.getElementById('list-empty').classList.toggle('hidden',filtered.length>0);
-  document.getElementById('wlist').innerHTML=filtered.map(x=>`<div class="wli"><div class="wli-l"><div class="wli-w">${x.word}</div><div class="wli-t">${x.tr||''}${x.plural?' · Pl: '+x.plural:''}</div></div><span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac)">${x.level||''}</span><button class="btn sm" style="font-size:11px;padding:3px 7px" onclick="addWordToList('${x._id}','${x._col}')" title="Zur Wortliste hinzufügen"><i class="ti ti-list-plus"></i></button><button class="delbtn" onclick="delWord('${x._id}','${x._col}')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>`).join('');
+  document.getElementById('wlist').innerHTML=filtered.map(x=>{
+    const listName=getWordListName(x._id);
+    const isFav=listName!==null;
+    return `<div class="wli"><div class="wli-l"><div class="wli-w">${x.word}</div><div class="wli-t">${x.tr||''}${x.plural?' · Pl: '+x.plural:''}</div></div>
+      ${listName?`<span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac);cursor:pointer" onclick="addWordToList('${x._id}','${x._col}')" title="Liste ändern">${listName}</span>`:''}
+      <button class="btn sm" style="font-size:18px;padding:3px 7px;color:${isFav?'#E0457B':'var(--txt3)'}" onclick="toggleFavorite('${x._id}','${x._col}')" title="Favorit"><i class="ti ${isFav?'ti-heart-filled':'ti-heart'}"></i></button>
+      <button class="delbtn" onclick="delWord('${x._id}','${x._col}')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>`;
+  }).join('');
 }
 
 // ARAMA
