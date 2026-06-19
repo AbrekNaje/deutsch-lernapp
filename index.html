@@ -806,7 +806,7 @@ textarea{resize:vertical;min-height:54px}
 </div>
 
 <!-- LİSTE SEÇİM MODAL -->
-<div id="list-picker-overlay" class="loading-overlay">
+<div id="list-picker-overlay" class="loading-overlay" onclick="if(event.target===this)closeListPicker()">
   <div class="loading-box" style="width:280px;max-width:85vw;align-items:stretch;text-align:left;padding:1.25rem">
     <div style="font-size:16px;font-weight:500;color:var(--txt);margin-bottom:4px">Wortliste wählen</div>
     <div id="lp-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin:8px 0"></div>
@@ -814,7 +814,6 @@ textarea{resize:vertical;min-height:54px}
       <input type="text" id="lp-new-name" placeholder="Neue Liste..." style="flex:1">
       <button class="btn pri sm" onclick="createListFromPicker()"><i class="ti ti-plus"></i></button>
     </div>
-    <button class="btn" style="margin-top:10px" onclick="closeListPicker()">Abbrechen</button>
   </div>
 </div>
 
@@ -1975,7 +1974,8 @@ window.createListFromPicker=async function(){
     window._wordLists.unshift(newList);
     window._listItems[res.id]=[];
     document.getElementById('lp-new-name').value='';
-    renderListPicker();
+    // Kelimeyi otomatik olarak yeni listeye ekle
+    await selectListForWord(res.id);
   }
 };
 
