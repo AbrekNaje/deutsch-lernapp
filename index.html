@@ -1753,7 +1753,6 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
     if(mGrp==='verb'){
       if(mTense==='praesens'){
         const missing=d.filter(w=>!w.praesens);
-        console.log('missing count:', missing.length, 'first missing:', missing[0]?._id, 'first d praesens:', d[0]?.praesens);
         if(missing.length){
           showLoading('Konjugationen werden geladen...',20);
           for(let i=0;i<missing.length&&i<50;i++){
@@ -1771,7 +1770,7 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
                   orig.plusquam=res.word.plusquam;
                 }
               }
-            }catch(e){console.error('getWordDetail error:',e);}
+            }catch(e){}
             setLoadingPct(20+Math.round((i+1)/missing.length*70));
           }
           hideLoading();
@@ -1780,7 +1779,6 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
         const idsInD = new Set(d.map(w=>w._id));
         const dFresh=(window._words||[]).filter(w=>idsInD.has(w._id));
         deck=dFresh.filter(w=>w.praesens&&w.praesens[mPron]);
-        console.log('mPron:',mPron,'dFresh:',dFresh.length,'deck:',deck.length,'sample word:',dFresh[0]);
         if(!deck.length){alert('Keine Daten für die gewählten Personen!');return;}
       } else if(mTense==='mastar'){
         deck=d;
@@ -1799,7 +1797,27 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
   }
   loadAndStart();
 }
-function showMulti(){const w=mDeck[mIdx];document.getElementById('mt-ctr').textContent=(mIdx+1)+'/'+mDeck.length;document.getElementById('mt-prog').style.width=(mIdx/mDeck.length*100)+'%';document.getElementById('mt-fb').classList.add('hidden');document.getElementById('mt-next').classList.add('hidden');let q='',qlbl='';if(mGrp==='verb'){const tl=TENSES.find(t=>t.id===mTense).lbl;if(mTense==='mastar'){qlbl=mDir==='de-tr'?'Was bedeutet es?':'Wie heißt es auf Deutsch? (Infinitiv)';q=mDir==='de-tr'?w.word:w.tr;mtSpk=w.word;}else{const pl=PRONOUNS.find(p=>p.id===mPron).lbl;qlbl=tl+' — '+pl+' Form?';q=w.word;mtSpk=w.word;}}else if(mGrp==='noun'){if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es auf Türkisch?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}else{if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es auf Türkisch?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}document.getElementById('mt-q').textContent=q;document.getElementById('mt-qlbl').textContent=qlbl;document.getElementById('mt-hint').textContent='';const others=grpPool(mGrp).filter(x=>x._id!==w._id).sort(()=>Math.random()-.5).slice(0,3);const opts=[w,...others].sort(()=>Math.random()-.5);const el=document.getElementById('mt-opts');el.innerHTML='';opts.forEach(o=>{let lbl='';if(mGrp==='verb'){if(mTense==='mastar')lbl=mDir==='de-tr'?(o.tr||o.word):o.word;else lbl=mTense==='praesens'?(o.praesens&&o.praesens[mPron]?o.praesens[mPron]:o.word):o[mTense]||o.word;}else if(mGrp==='noun'){lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}else{lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}const btn=document.createElement('button');btn.className='opt';btn.textContent=lbl;btn.onclick=()=>answerMulti(btn,o._id===w._id,w);el.appendChild(btn);});}
+function showMulti(){const w=mDeck[mIdx];document.getElementById('mt-ctr').textContent=(mIdx+1)+'/'+mDeck.length;document.getElementById('mt-prog').style.width=(mIdx/mDeck.length*100)+'%';document.getElementById('mt-fb').classList.add('hidden');document.getElementById('mt-next').classList.add('hidden');let q='',qlbl='';if(mGrp==='verb'){const tl=TENSES.find(t=>t.id===mTense).lbl;if(mTense==='mastar'){qlbl=mDir==='de-tr'?'Was bedeutet es?':'Wie heißt es auf Deutsch? (Infinitiv)';q=mDir==='de-tr'?w.word:w.tr;mtSpk=w.word;}else{const pl=PRONOUNS.find(p=>p.id===mPron).lbl;qlbl=tl+' — '+pl+' Form?';q=w.word;mtSpk=w.word;}}else if(mGrp==='noun'){if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es auf Türkisch?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}else{if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es auf Türkisch?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}document.getElementById('mt-q').textContent=q;document.getElementById('mt-qlbl').textContent=qlbl;document.getElementById('mt-hint').textContent='';
+  let opts;
+  // Präsens için aynı fiilin diğer şahıs çekimlerini şık olarak kullan
+  if(mGrp==='verb'&&mTense==='praesens'&&w.praesens){
+    const allProns=['ich','du','er','wir','ihr','sie'];
+    const otherProns=allProns.filter(p=>p!==mPron&&w.praesens[p]&&w.praesens[p]!==w.praesens[mPron]);
+    const shuffledProns=otherProns.sort(()=>Math.random()-.5).slice(0,3);
+    const wrongLabels=shuffledProns.map(p=>w.praesens[p]);
+    // Yeterli farklı çekim yoksa diğer fiillerden tamamla
+    if(wrongLabels.length<3){
+      const others=grpPool(mGrp).filter(x=>x._id!==w._id&&x.praesens&&x.praesens[mPron]&&x.praesens[mPron]!==w.praesens[mPron]).sort(()=>Math.random()-.5);
+      for(const o of others){if(wrongLabels.length>=3)break;wrongLabels.push(o.praesens[mPron]);}
+    }
+    const correctLabel=w.praesens[mPron];
+    const labelOpts=[correctLabel,...wrongLabels.slice(0,3)].sort(()=>Math.random()-.5);
+    opts=labelOpts.map(lbl=>({_id:lbl===correctLabel?w._id:'wrong_'+lbl,word:w.word,tr:w.tr,praesens:w.praesens,_customLabel:lbl}));
+  } else {
+    const others=grpPool(mGrp).filter(x=>x._id!==w._id).sort(()=>Math.random()-.5).slice(0,3);
+    opts=[w,...others].sort(()=>Math.random()-.5);
+  }
+  const el=document.getElementById('mt-opts');el.innerHTML='';opts.forEach(o=>{let lbl='';if(o._customLabel){lbl=o._customLabel;}else if(mGrp==='verb'){if(mTense==='mastar')lbl=mDir==='de-tr'?(o.tr||o.word):o.word;else lbl=mTense==='praesens'?(o.praesens&&o.praesens[mPron]?o.praesens[mPron]:o.word):o[mTense]||o.word;}else if(mGrp==='noun'){lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}else{lbl=mDir==='de-tr'?(o.tr||o.word):o.word;}const btn=document.createElement('button');btn.className='opt';btn.textContent=lbl;btn.onclick=()=>answerMulti(btn,o._id===w._id,w);el.appendChild(btn);});}
 function answerMulti(btn,correct,w){document.querySelectorAll('#mt-opts .opt').forEach(b=>b.disabled=true);let cl='';if(mGrp==='verb'){if(mTense==='mastar')cl=mDir==='de-tr'?(w.tr||w.word):w.word;else cl=mTense==='praesens'?(w.praesens&&w.praesens[mPron]?w.praesens[mPron]:w.word):w[mTense]||w.word;}else if(mGrp==='noun'){cl=mDir==='de-tr'?(w.tr||w.word):w.word;}else{cl=mDir==='de-tr'?(w.tr||w.word):w.word;}if(correct){btn.classList.add('ok');mCorr++;const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.correct=(o.correct||0)+1;o.streak=(o.streak||0)+1;updateStats(o);}}else{btn.classList.add('no');document.querySelectorAll('#mt-opts .opt').forEach(b=>{if(b.textContent===cl)b.classList.add('ok');});mWrong.push(w);const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.wrong=(o.wrong||0)+1;o.streak=0;updateStats(o);}document.getElementById('mt-fb').innerHTML='<span class="no">Richtig wäre: '+cl+'</span>';document.getElementById('mt-fb').classList.remove('hidden');}document.getElementById('mt-next').classList.remove('hidden');
   // Örnek cümleler
   const sentEl=document.getElementById('mt-sentences');
