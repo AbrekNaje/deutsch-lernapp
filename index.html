@@ -1487,7 +1487,7 @@ function go(id){
     (async()=>{
       const user=window._currentUser;
       if(user && !window._wordLists.length){
-        const res=await azureCall({action:'getLists',userId:user.uid});
+        const res=await window._azureCall({action:'getLists',userId:user.uid});
         if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
       }
       // Her listenin içeriğini de yükle
@@ -1530,7 +1530,7 @@ window.changeLang = async function(){
   try{
     const user=window._currentUser;
     if(!user)throw new Error('Nicht angemeldet');
-    const res=await azureCall({action:'setUserLang',userId:user.uid,anaAil:lang});
+    const res=await window._azureCall({action:'setUserLang',userId:user.uid,anaAil:lang});
     if(!res.success)throw new Error(res.error||'Fehler');
     if(window._userProfile)window._userProfile.anaAil=lang;
     toast('Gespeichert!');updateSettingsProfile();
@@ -1745,7 +1745,7 @@ function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById(
   updateEx();
 
   if(w.type==='verb'&&!w.praesens){
-    azureCall({action:'getWordDetail',_id:w._id,_col:w._col}).then(res=>{
+    window._azureCall({action:'getWordDetail',_id:w._id,_col:w._col}).then(res=>{
       if(res.success){
         Object.assign(w,res.word);
         // window._words içindeki kelimeyi de güncelle
@@ -1899,7 +1899,7 @@ function beginWrite(){const lv=document.getElementById('wf-level').value;const c
       if(verbsWithoutConjugation.length){
         showLoading('Verbkonjugationen werden geladen...', 30);
         await Promise.all(verbsWithoutConjugation.slice(0,10).map(async w=>{
-          const res=await azureCall({action:'getWordDetail',_id:w._id,_col:w._col});
+          const res=await window._azureCall({action:'getWordDetail',_id:w._id,_col:w._col});
           if(res.success)Object.assign(w,res.word);
         }));
         hideLoading();
@@ -1938,7 +1938,7 @@ async function toggleFavorite(wordId,wordCol){
     for(const list of window._wordLists){
       const items=window._listItems&&window._listItems[list.Id];
       if(items&&items.some(i=>i.WordId===wordId)){
-        await azureCall({action:'removeFromList',listId:list.Id,wordId});
+        await window._azureCall({action:'removeFromList',listId:list.Id,wordId});
         window._listItems[list.Id]=items.filter(i=>i.WordId!==wordId);
         break;
       }
@@ -1947,16 +1947,16 @@ async function toggleFavorite(wordId,wordCol){
     // Ekle — "List 1" var mı kontrol et, yoksa oluştur
     if(!window._wordLists.length){
       const user=window._currentUser;
-      const res=await azureCall({action:'getLists',userId:user.uid});
+      const res=await window._azureCall({action:'getLists',userId:user.uid});
       if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
     }
     let list1=window._wordLists.find(l=>l.ListName==='List 1');
     if(!list1){
       const user=window._currentUser;
-      const res=await azureCall({action:'saveList',userId:user.uid,listName:'List 1'});
+      const res=await window._azureCall({action:'saveList',userId:user.uid,listName:'List 1'});
       if(res.success){list1={Id:res.id,ListName:'List 1',wordCount:0};window._wordLists.unshift(list1);}
     }
-    await azureCall({action:'addToList',listId:list1.Id,wordId,wordCol});
+    await window._azureCall({action:'addToList',listId:list1.Id,wordId,wordCol});
     if(!window._listItems[list1.Id])window._listItems[list1.Id]=[];
     window._listItems[list1.Id].push({WordId:wordId,WordCol:wordCol});
   }
