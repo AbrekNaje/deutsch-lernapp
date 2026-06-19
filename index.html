@@ -125,10 +125,11 @@ async function loadUserProfile(user) {
     userProfile = {
       email: res.profile.Email,
       anaAil: res.profile.AnaDil,
-      kullaniciTipi: res.profile.KullaniciTipi
+      kullaniciTipi: res.profile.KullaniciTipi,
+      programAdi: res.profile.ProgramAdi || 'Klett'
     };
   } else {
-    userProfile = { email: user.email, anaAil: '', kullaniciTipi: 1 };
+    userProfile = { email: user.email, anaAil: '', kullaniciTipi: 1, programAdi: 'Klett' };
   }
   window._userProfile = userProfile;
 }
@@ -325,9 +326,12 @@ window.saveWord = async function() {
     if(de)sentences.push({de,tr});
   }
   if(sentences.length)w.sentences=sentences;
+  // Seviye boşsa AI önerisini veya A1.1'i kullan
+  if(!w.level)w.level=window._aiSuggestedLevel||'A1.1';
+  if(!w.chapter)w.chapter='Andere';
   showLoading('Wird gespeichert...');
   try {
-    const res = await azureCall({ action: 'save', userId: user.uid, word: w });
+    const res = await azureCall({ action: 'addWord', userId: user.uid, word: w });
     if (!res.success) {
       if (res.duplicate) {
         toast('Dieses Wort existiert bereits!', false);
@@ -435,6 +439,8 @@ window.aiFill = async function() {
     if(parsed.cumle1_de){document.getElementById('ex-de-1').value=parsed.cumle1_de;document.getElementById('ex-tr-1').value=parsed.cumle1_tr||'';}
     if(parsed.cumle2_de){document.getElementById('ex-de-2').value=parsed.cumle2_de;document.getElementById('ex-tr-2').value=parsed.cumle2_tr||'';}
     if(parsed.cumle3_de){document.getElementById('ex-de-3').value=parsed.cumle3_de;document.getElementById('ex-tr-3').value=parsed.cumle3_tr||'';}
+    // AI'nin önerdiği seviyeyi sakla (saveWord'da kullanılacak)
+    window._aiSuggestedLevel = parsed.seviye || '';
     status.textContent='✓ Felder ausgefüllt — bitte prüfen und speichern';status.style.color='var(--success)';
   }catch(e){status.textContent='Fehler: '+e.message;status.style.color='var(--danger)';}
   btn.disabled=false;btn.innerHTML='<i class="ti ti-sparkles"></i> Mit KI ausfüllen';
@@ -445,7 +451,8 @@ window.openMasterImport = async function() {
   // Seviye ve bölüm listelerini yükle
   showLoading('Wird geladen...', 30);
   try {
-    const res = await azureCall({ action: 'masterPreview', tur: 'all', seviye: 'all', bolum: 'all' });
+    const programAdi = window._userProfile ? window._userProfile.programAdi : 'Klett';
+    const res = await azureCall({ action: 'masterPreview', tur: 'all', seviye: 'all', bolum: 'all', programAdi });
     if (res.success) {
       const seviyeSel = document.getElementById('mi-seviye');
       const bolumSel = document.getElementById('mi-bolum');
@@ -467,7 +474,8 @@ window.masterPreviewUpdate = async function() {
   const seviye = document.getElementById('mi-seviye').value;
   const bolum = document.getElementById('mi-bolum').value;
   try {
-    const res = await azureCall({ action: 'masterPreview', tur, seviye, bolum });
+    const programAdi = window._userProfile ? window._userProfile.programAdi : 'Klett';
+  const res = await azureCall({ action: 'masterPreview', tur, seviye, bolum, programAdi });
     if (res.success) {
       document.getElementById('mi-preview').textContent = `${res.toplam} Wörter gefunden`;
       document.getElementById('mi-import-btn').disabled = res.toplam === 0;
@@ -479,17 +487,15 @@ window.doMasterImport = async function() {
   const tur = document.getElementById('mi-tur').value;
   const seviye = document.getElementById('mi-seviye').value;
   const bolum = document.getElementById('mi-bolum').value;
-  const overwrite = document.querySelector('input[name="mi-overwrite"]:checked').value === 'overwrite';
   const user = window._currentUser;
-  const anaAil = window._userProfile ? window._userProfile.anaAil : 'tr';
-
+  const programAdi = window._userProfile ? window._userProfile.programAdi : 'Klett';
   showLoading('Wird importiert...', 20);
   try {
-    const res = await azureCall({ action: 'masterImport', userId: user.uid, tur, seviye, bolum, anaAil, overwrite });
+    const res = await azureCall({ action: 'masterImport', userId: user.uid, tur, seviye, bolum, programAdi });
     if (!res.success) throw new Error(res.error || 'Fehler');
     const result = document.getElementById('mi-result');
     result.classList.remove('hidden');
-    result.textContent = `✅ ${res.added} hinzugefügt, ${res.updated} aktualisiert, ${res.skipped} übersprungen`;
+    result.textContent = `✅ ${res.added} hinzugefügt, ${res.skipped} übersprungen`;
     toast(`${res.added} Wörter importiert!`);
     await loadWords();
   } catch(e) { toast('Fehler: ' + e.message, false); }
@@ -1041,13 +1047,6 @@ textarea{resize:vertical;min-height:54px}
   <div class="section">
     <div class="section-title">Vorschau</div>
     <div id="mi-preview" style="font-size:15px;color:var(--txt2);text-align:center;padding:12px">Bitte Filter wählen...</div>
-  </div>
-  <div class="section">
-    <div class="section-title">Bei vorhandenen Wörtern</div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-      <label><input type="radio" name="mi-overwrite" value="keep" checked> Meine Wörter behalten (überspringen)</label>
-      <label><input type="radio" name="mi-overwrite" value="overwrite"> Überschreiben</label>
-    </div>
   </div>
   <button class="btn pri" id="mi-import-btn" onclick="doMasterImport()" disabled>
     <i class="ti ti-database-import"></i> Importieren
