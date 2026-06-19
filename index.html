@@ -624,7 +624,7 @@ function applyListFilter(pool, listId) {
 // Liste önbelleği
 window._listItems = {};
 
-async function loadListItems(listId) {
+window.loadListItems = async function loadListItems(listId) {
   if (!listId || window._listItems[listId]) return;
   const res = await azureCall({ action: 'getListWords', listId });
   if (res.success) window._listItems[listId] = res.items;
@@ -1488,7 +1488,7 @@ function go(id){
         if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
       }
       // Her listenin içeriğini de yükle
-      await Promise.all(window._wordLists.map(l=>loadListItems(l.Id)));
+      await Promise.all(window._wordLists.map(l=>window.loadListItems(l.Id)));
       renderList();
     })();
     renderList();
@@ -1678,11 +1678,11 @@ function applyFilter(pool,level,chapter){let r=pool;if(level)r=r.filter(w=>w.lev
 function fillLevels(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const levels=[...new Set(pool.map(w=>w.level).filter(l=>l))].sort();sel.innerHTML='<option value="">Alle</option>'+levels.map(l=>`<option value="${l}">${l}</option>`).join('');if(levels.includes(cur))sel.value=cur;else sel.value='';}
 function fillChapters(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const chapters=[...new Set(pool.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const getNum=s=>{const m=String(s).match(/\d+/);return m?Number(m[0]):NaN;};const na=getNum(a),nb=getNum(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});sel.innerHTML='<option value="">Alle</option>'+chapters.map(c=>`<option value="${c}">${c}</option>`).join('');if(chapters.map(String).includes(String(cur)))sel.value=cur;else sel.value='';}
 
-function updateFChapters(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('ff-chapter',filtered);const listId=document.getElementById('ff-list')?.value;if(listId)loadListItems(listId).then(()=>updateFCount());else updateFCount();}
+function updateFChapters(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('ff-chapter',filtered);const listId=document.getElementById('ff-list')?.value;if(listId)window.loadListItems(listId).then(()=>updateFCount());else updateFCount();}
 function updateFCount(){const pool=grpPool(flGrp);const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list')?.value;let n=applyFilter(pool,lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];n=n.filter(w=>items.some(i=>i.WordId===w._id));}document.getElementById('ff-count').textContent=n.length+' Wörter entsprechen diesem Filter';}
-function updateMChapters(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('mf-chapter',filtered);const listId=document.getElementById('mf-list')?.value;if(listId)loadListItems(listId).then(()=>updateMCount());else updateMCount();}
+function updateMChapters(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('mf-chapter',filtered);const listId=document.getElementById('mf-list')?.value;if(listId)window.loadListItems(listId).then(()=>updateMCount());else updateMCount();}
 function updateMCount(){const pool=grpPool(mGrp);const lv=document.getElementById('mf-level').value;const ch=document.getElementById('mf-chapter').value;const listId=document.getElementById('mf-list')?.value;let n=applyFilter(pool,lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];n=n.filter(w=>items.some(i=>i.WordId===w._id));}document.getElementById('mf-count').textContent=n.length+' Wörter entsprechen diesem Filter';}
-function updateWChapters(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('wf-chapter',filtered);const listId=document.getElementById('wf-list')?.value;if(listId)loadListItems(listId).then(()=>updateWCount());else updateWCount();}
+function updateWChapters(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('wf-chapter',filtered);const listId=document.getElementById('wf-list')?.value;if(listId)window.loadListItems(listId).then(()=>updateWCount());else updateWCount();}
 function updateWCount(){const pool=grpPool(wGrp);const lv=document.getElementById('wf-level').value;const ch=document.getElementById('wf-chapter').value;const listId=document.getElementById('wf-list')?.value;let n=applyFilter(pool,lv,ch);if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];n=n.filter(w=>items.some(i=>i.WordId===w._id));}document.getElementById('wf-count').textContent=n.length+' Wörter entsprechen diesem Filter';}
 
 // Kelime ekleme form
@@ -1929,7 +1929,7 @@ window.openListPicker=async function(wordId,wordCol){
     const res=await window._azureCall({action:'getLists',userId:user.uid});
     if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
   }
-  await Promise.all(window._wordLists.map(l=>loadListItems(l.Id)));
+  await Promise.all(window._wordLists.map(l=>window.loadListItems(l.Id)));
   renderListPicker();
   document.getElementById('list-picker-overlay').classList.add('show');
 };
