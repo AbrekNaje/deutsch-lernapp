@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deutsch Lernapp – Über das Projekt</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ac:#534AB7;--acl:#EEEDFE;--acm:#7F77DD;
+  --bg:#F5F0FF;--bg2:#EDE6FF;
+  --txt:#1a1a1a;--txt2:#5a5468;--txt3:#8a84a0;
+  --brd:rgba(130,100,200,0.18);
+  --card-bg:#FFE8F0;--card-brd:rgba(220,130,160,0.25);
+  --rad:14px;--radlg:20px;
+}
+body{
+  font-family:'Georgia',-apple-system,'Segoe UI',serif;
+  background:linear-gradient(180deg,#F5F0FF 0%,#FBF6FF 40%,#FFF5F8 100%);
+  color:var(--txt);
+  line-height:1.6;
+  min-height:100vh;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 24px 80px}
+
+/* Bayrak şeridi */
+.flagbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(245,240,255,0.92);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--brd);
+  padding:10px 16px;
+  display:flex;justify-content:center;
+  flex-wrap:wrap;gap:6px;
+}
+.flag-btn{
+  background:none;border:1.5px solid transparent;border-radius:10px;
+  padding:5px 8px;cursor:pointer;font-size:20px;
+  display:flex;align-items:center;gap:6px;
+  transition:all .15s;
+  font-family:inherit;
+}
+.flag-btn span.lbl{font-size:11px;color:var(--txt3);font-family:-apple-system,'Segoe UI',sans-serif}
+.flag-btn:hover{background:var(--acl)}
+.flag-btn.active{background:var(--acl);border-color:var(--ac)}
+.flag-btn.active span.lbl{color:var(--ac);font-weight:600}
+
+/* Hero */
+.hero{
+  text-align:center;
+  padding:56px 0 36px;
+}
+.hero-emblem{
+  font-size:54px;
+  margin-bottom:14px;
+  display:inline-block;
+}
+.hero h1{
+  font-size:38px;
+  font-weight:700;
+  letter-spacing:-0.5px;
+  background:linear-gradient(135deg,var(--ac),#C2569C);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  margin-bottom:10px;
+}
+.hero .sub{
+  font-family:-apple-system,'Segoe UI',sans-serif;
+  font-size:16px;color:var(--txt2);font-style:italic;
+}
+
+/* İçerik kartları */
+.card{
+  background:#fff;
+  border:1px solid var(--brd);
+  border-radius:var(--radlg);
+  padding:28px 26px;
+  margin-bottom:18px;
+  box-shadow:0 2px 12px rgba(130,100,200,0.06);
+}
+.card.pink{background:var(--card-bg);border-color:var(--card-brd)}
+.card h2{
+  font-size:20px;font-weight:700;color:var(--ac);
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.card p{font-size:16px;color:var(--txt);margin-bottom:10px}
+.card p:last-child{margin-bottom:0}
+.card ul{margin:10px 0 0 0;padding-left:0;list-style:none}
+.card li{
+  font-size:15.5px;color:var(--txt);
+  padding:9px 0 9px 30px;
+  position:relative;
+  border-bottom:1px solid rgba(130,100,200,0.08);
+}
+.card li:last-child{border-bottom:none}
+.card li:before{
+  content:'✓';position:absolute;left:0;top:9px;
+  color:var(--ac);font-weight:700;
+}
+.card .step{
+  display:flex;gap:14px;align-items:flex-start;
+  padding:10px 0;
+}
+.step-num{
+  flex-shrink:0;width:30px;height:30px;border-radius:50%;
+  background:var(--acl);color:var(--ac);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;
+  font-family:-apple-system,'Segoe UI',sans-serif;
+}
+.step-txt{font-size:15.5px;padding-top:4px}
+
+/* Quote / persönliche Note */
+.quote{
+  font-style:italic;
+  font-size:18px;
+  color:var(--txt2);
+  text-align:center;
+  padding:6px 10px;
+  border-left:3px solid var(--ac);
+  background:var(--acl);
+  border-radius:0 var(--rad) var(--rad) 0;
+  margin:0 0 24px 0;
+  padding:18px 22px;
+}
+
+/* CTA Buton */
+.cta{
+  display:block;text-align:center;
+  background:linear-gradient(135deg,var(--ac),#7F6FD0);
+  color:#fff;text-decoration:none;
+  font-family:-apple-system,'Segoe UI',sans-serif;
+  font-weight:600;font-size:16px;
+  padding:16px 28px;border-radius:99px;
+  margin:30px auto 10px;
+  max-width:320px;
+  box-shadow:0 6px 20px rgba(83,74,183,0.3);
+  transition:transform .15s;
+}
+.cta:hover{transform:translateY(-2px)}
+
+/* Footer */
+.footer{
+  text-align:center;
+  padding-top:30px;
+  font-family:-apple-system,'Segoe UI',sans-serif;
+  font-size:13.5px;color:var(--txt3);
+}
+.footer a{color:var(--ac);text-decoration:none}
+.footer a:hover{text-decoration:underline}
+
+[dir="rtl"] .card li{padding:9px 30px 9px 0}
+[dir="rtl"] .card li:before{left:auto;right:0}
+[dir="rtl"] .quote{border-left:none;border-right:3px solid var(--ac);border-radius:var(--rad) 0 0 var(--rad)}
+[dir="rtl"] .step{flex-direction:row-reverse}
+
+@media(max-width:480px){
+  .hero h1{font-size:28px}
+  .hero-emblem{font-size:42px}
+  .card{padding:22px 18px}
+  .flag-btn span.lbl{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="flagbar" id="flagbar"></div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-emblem">🇩🇪📚</div>
+    <h1 id="t-title">Deutsch Lernapp</h1>
+    <div class="sub" id="t-subtitle">Eine Lernkartei für die ganze Familie</div>
+  </div>
+
+  <div class="quote" id="t-intro"></div>
+
+  <div class="card">
+    <h2 id="t-what-h">📖 <span></span></h2>
+    <p id="t-what-p"></p>
+  </div>
+
+  <div class="card pink">
+    <h2 id="t-features-h">✨ <span></span></h2>
+    <ul id="t-features-list"></ul>
+  </div>
+
+  <div class="card">
+    <h2 id="t-start-h">🚀 <span></span></h2>
+    <div id="t-start-steps"></div>
+  </div>
+
+  <div class="card pink">
+    <h2 id="t-import-h">📥 <span></span></h2>
+    <div id="t-import-steps"></div>
+  </div>
+
+  <a class="cta" id="t-cta" href="https://abreknaje.github.io/deutsch-lernapp/" target="_blank"></a>
+
+  <div class="footer" id="t-footer"></div>
+</div>
+
+<script>
+const LANGS = [
+  {code:'de', flag:'🇩🇪', name:'Deutsch'},
+  {code:'tr', flag:'🇹🇷', name:'Türkçe'},
+  {code:'en', flag:'🇬🇧', name:'English'},
+  {code:'ar', flag:'🇸🇦', name:'العربية'},
+  {code:'ko', flag:'🇰🇷', name:'한국어'},
+  {code:'es', flag:'🇪🇸', name:'Español'},
+  {code:'bn', flag:'🇧🇩', name:'বাংলা'},
+  {code:'ru', flag:'🇷🇺', name:'Русский'},
+  {code:'uk', flag:'🇺🇦', name:'Українська'},
+  {code:'ps', flag:'🇦🇫', name:'پښتو'},
+  {code:'fa', flag:'🇮🇷', name:'فارسی'},
+  {code:'bg', flag:'🇧🇬', name:'Български'},
+  {code:'sr', flag:'🇷🇸', name:'Српски'},
+  {code:'hi', flag:'🇮🇳', name:'हिंदी'},
+];
+
+const RTL = ['ar','fa','ps'];
+
+const T = {
+de: {
+  title:'Deutsch Lernapp', subtitle:'Eine Lernkartei für die ganze Familie',
+  intro:'„Ich habe diese App im Urlaub für unsere Familie geschrieben, damit wir die deutschen Wörter nicht vergessen. Vielleicht ist sie auch für euch nützlich – deshalb teile ich sie hier.“',
+  what_h:'Was ist das?', what_p:'Diese App enthält die Wörter aus den Büchern „Die neue Linie“. Du kannst mit Lernkarten, Multiple-Choice-Tests und Schreibtests üben – sortiert nach Buchniveau (A1.1–C2) und Kapitel.',
+  features_h:'Was kann die App?',
+  features:['Lernkarten zum Umdrehen und Merken','Multiple-Choice-Tests mit verschiedenen Zeitformen','Schreibtests mit deutscher Sonderzeichen-Tastatur','Eigene Wortlisten erstellen (z.B. für eine Prüfung)','Beispielsätze zu jedem Wort','Mehrsprachige Übersetzungen (13 Sprachen)','Langsames Vorlesen zum besseren Verständnis'],
+  start_h:'Wie fange ich an?',
+  start:['Öffne die App und wähle deine Muttersprache.','Registriere dich mit E-Mail oder Google-Konto.','Gehe zu Einstellungen → „Aus Masterdatenbank importieren“.','Wähle Niveau und Kapitel und importiere die Wörter in deine eigene Liste.'],
+  import_h:'Wörter in mein Konto übertragen',
+  import:['Tippe in den Einstellungen auf „Aus Masterdatenbank importieren“.','Filtere nach Wortart (Nomen/Verben/Adjektiv), Niveau und Kapitel.','Tippe auf „Importieren“ — die Wörter erscheinen sofort in deiner Liste.','Du kannst jederzeit weitere Kapitel hinzufügen.'],
+  cta:'Zur App →',
+  footer:'Diese App wurde mit Claude (Anthropic) entwickelt. Wünsche oder Ideen für neue Funktionen?<br>Schreib mir: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+tr: {
+  title:'Deutsch Lernapp', subtitle:'Tüm aile için bir kelime kartı uygulaması',
+  intro:'"Bu uygulamayı tatildeyken, ailemizin Almanca kelimeleri unutmaması için yazdım. Belki sizin de işinize yarar diye burada paylaşmak istedim."',
+  what_h:'Bu nedir?', what_p:'Bu uygulama "Die neue Linie" kitaplarındaki kelimeleri içeriyor. Kelime kartları, çoktan seçmeli testler ve yazılı testlerle çalışabilirsiniz — kitap seviyesine (A1.1–C2) ve bölüme göre sıralanmış.',
+  features_h:'Uygulama neler yapabiliyor?',
+  features:['Çevirerek ezberlemek için kelime kartları','Farklı zaman kiplerinde çoktan seçmeli testler','Almanca özel karakter klavyeli yazılı testler','Kendi kelime listelerinizi oluşturma (örn. bir sınav için)','Her kelime için örnek cümleler','Çok dilli çeviriler (13 dil)','Daha iyi anlamak için yavaş seslendirme'],
+  start_h:'Nasıl başlarım?',
+  start:['Uygulamayı açın ve ana dilinizi seçin.','E-posta veya Google hesabıyla kayıt olun.','Ayarlar → "Ana veritabanından içe aktar" bölümüne gidin.','Seviye ve bölüm seçip kelimeleri kendi listenize aktarın.'],
+  import_h:'Kelimeleri hesabıma aktarmak',
+  import:['Ayarlar bölümünde "Ana veritabanından içe aktar"a dokunun.','Kelime türüne (isim/fiil/sıfat), seviyeye ve bölüme göre filtreleyin.','"İçe Aktar"a dokunun — kelimeler anında listenizde görünür.','İstediğiniz zaman yeni bölümler ekleyebilirsiniz.'],
+  cta:'Uygulamaya Git →',
+  footer:'Bu uygulama Claude (Anthropic) ile geliştirilmiştir. Yeni özellikler için dileğiniz mi var?<br>Bana yazın: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+en: {
+  title:'Deutsch Lernapp', subtitle:'A flashcard app for the whole family',
+  intro:'"I wrote this app on vacation so our family wouldn\'t forget our German words. Maybe it\'s useful for you too — that\'s why I\'m sharing it here."',
+  what_h:'What is this?', what_p:'This app contains the vocabulary from the "Die neue Linie" textbooks. You can practice with flashcards, multiple-choice tests, and writing tests — sorted by book level (A1.1–C2) and chapter.',
+  features_h:'What can the app do?',
+  features:['Flashcards to flip and memorize','Multiple-choice tests with different verb tenses','Writing tests with a German special-character keyboard','Create your own word lists (e.g. for an exam)','Example sentences for every word','Multilingual translations (13 languages)','Slow read-aloud for better understanding'],
+  start_h:'How do I get started?',
+  start:['Open the app and choose your native language.','Sign up with email or a Google account.','Go to Settings → "Import from master database".','Select level and chapter, then import the words into your own list.'],
+  import_h:'Transferring words to my account',
+  import:['Tap "Import from master database" in Settings.','Filter by word type (noun/verb/adjective), level, and chapter.','Tap "Import" — the words appear instantly in your list.','You can add more chapters anytime.'],
+  cta:'Open the App →',
+  footer:'This app was built with Claude (Anthropic). Have ideas for new features?<br>Email me: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+ar: {
+  title:'Deutsch Lernapp', subtitle:'تطبيق بطاقات تعليمية لكل العائلة',
+  intro:'"كتبت هذا التطبيق في العطلة حتى لا تنسى عائلتنا الكلمات الألمانية. ربما يكون مفيدًا لكم أيضًا - لهذا أشاركه هنا."',
+  what_h:'ما هذا؟', what_p:'يحتوي هذا التطبيق على المفردات من كتب "Die neue Linie". يمكنك التدرب باستخدام البطاقات التعليمية واختبارات الاختيار من متعدد واختبارات الكتابة - مرتبة حسب مستوى الكتاب (A1.1–C2) والفصل.',
+  features_h:'ماذا يمكن للتطبيق أن يفعل؟',
+  features:['بطاقات تعليمية للقلب والحفظ','اختبارات اختيار من متعدد بأزمنة أفعال مختلفة','اختبارات كتابة بلوحة مفاتيح للأحرف الألمانية الخاصة','إنشاء قوائم كلمات خاصة بك (مثلاً لامتحان)','جمل مثال لكل كلمة','ترجمات متعددة اللغات (13 لغة)','قراءة بطيئة للفهم الأفضل'],
+  start_h:'كيف أبدأ؟',
+  start:['افتح التطبيق واختر لغتك الأم.','سجل باستخدام البريد الإلكتروني أو حساب جوجل.','اذهب إلى الإعدادات ← "استيراد من قاعدة البيانات الرئيسية".','اختر المستوى والفصل واستورد الكلمات إلى قائمتك الخاصة.'],
+  import_h:'نقل الكلمات إلى حسابي',
+  import:['اضغط على "استيراد من قاعدة البيانات الرئيسية" في الإعدادات.','صفِّ حسب نوع الكلمة (اسم/فعل/صفة) والمستوى والفصل.','اضغط على "استيراد" - تظهر الكلمات فورًا في قائمتك.','يمكنك إضافة المزيد من الفصول في أي وقت.'],
+  cta:'افتح التطبيق ←',
+  footer:'تم تطوير هذا التطبيق باستخدام Claude (Anthropic). هل لديك أفكار لميزات جديدة؟<br>راسلني: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+ko: {
+  title:'Deutsch Lernapp', subtitle:'온 가족을 위한 단어 카드 앱',
+  intro:'"우리 가족이 독일어 단어를 잊지 않도록 휴가 중에 이 앱을 만들었습니다. 여러분에게도 유용할 것 같아 여기서 공유합니다."',
+  what_h:'이게 뭔가요?', what_p:'이 앱에는 "Die neue Linie" 교재의 어휘가 포함되어 있습니다. 플래시카드, 객관식 테스트, 작문 테스트로 연습할 수 있으며 — 교재 레벨(A1.1–C2)과 챕터별로 정렬되어 있습니다.',
+  features_h:'앱에서 무엇을 할 수 있나요?',
+  features:['뒤집어서 암기하는 플래시카드','다양한 동사 시제의 객관식 테스트','독일어 특수문자 키보드가 있는 작문 테스트','나만의 단어 목록 만들기 (예: 시험 대비)','모든 단어에 대한 예문','다국어 번역 (13개 언어)','이해를 돕는 느린 읽기 기능'],
+  start_h:'어떻게 시작하나요?',
+  start:['앱을 열고 모국어를 선택하세요.','이메일 또는 Google 계정으로 가입하세요.','설정 → "마스터 데이터베이스에서 가져오기"로 이동하세요.','레벨과 챕터를 선택하고 단어를 내 목록으로 가져오세요.'],
+  import_h:'내 계정으로 단어 가져오기',
+  import:['설정에서 "마스터 데이터베이스에서 가져오기"를 누르세요.','품사(명사/동사/형용사), 레벨, 챕터로 필터링하세요.','"가져오기"를 누르세요 — 단어가 즉시 목록에 나타납니다.','언제든지 더 많은 챕터를 추가할 수 있습니다.'],
+  cta:'앱 열기 →',
+  footer:'이 앱은 Claude(Anthropic)로 제작되었습니다. 새로운 기능에 대한 아이디어가 있으신가요?<br>메일 주세요: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+es: {
+  title:'Deutsch Lernapp', subtitle:'Una app de tarjetas de vocabulario para toda la familia',
+  intro:'"Escribí esta app durante las vacaciones para que nuestra familia no olvidara las palabras en alemán. Quizás también te sea útil, por eso la comparto aquí."',
+  what_h:'¿Qué es esto?', what_p:'Esta app contiene el vocabulario de los libros "Die neue Linie". Puedes practicar con tarjetas, pruebas de opción múltiple y pruebas de escritura — ordenadas por nivel del libro (A1.1–C2) y capítulo.',
+  features_h:'¿Qué puede hacer la app?',
+  features:['Tarjetas para voltear y memorizar','Pruebas de opción múltiple con diferentes tiempos verbales','Pruebas de escritura con teclado de caracteres especiales alemanes','Crea tus propias listas de palabras (p.ej. para un examen)','Frases de ejemplo para cada palabra','Traducciones multilingües (13 idiomas)','Lectura lenta para mejor comprensión'],
+  start_h:'¿Cómo empiezo?',
+  start:['Abre la app y elige tu idioma nativo.','Regístrate con correo electrónico o cuenta de Google.','Ve a Configuración → "Importar desde base de datos maestra".','Selecciona nivel y capítulo, e importa las palabras a tu lista.'],
+  import_h:'Transferir palabras a mi cuenta',
+  import:['Toca "Importar desde base de datos maestra" en Configuración.','Filtra por tipo de palabra (sustantivo/verbo/adjetivo), nivel y capítulo.','Toca "Importar" — las palabras aparecen al instante en tu lista.','Puedes añadir más capítulos en cualquier momento.'],
+  cta:'Abrir la App →',
+  footer:'Esta app fue creada con Claude (Anthropic). ¿Tienes ideas para nuevas funciones?<br>Escríbeme: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+bn: {
+  title:'Deutsch Lernapp', subtitle:'পুরো পরিবারের জন্য একটি ফ্ল্যাশকার্ড অ্যাপ',
+  intro:'"আমাদের পরিবার যাতে জার্মান শব্দ ভুলে না যায়, তাই আমি ছুটিতে এই অ্যাপটি লিখেছি। হয়তো এটি আপনাদেরও কাজে লাগবে - তাই এখানে শেয়ার করছি।"',
+  what_h:'এটি কী?', what_p:'এই অ্যাপে "Die neue Linie" বইয়ের শব্দভাণ্ডার রয়েছে। আপনি ফ্ল্যাশকার্ড, বহুনির্বাচনী পরীক্ষা এবং লেখার পরীক্ষা দিয়ে অনুশীলন করতে পারেন — বইয়ের স্তর (A1.1–C2) এবং অধ্যায় অনুযায়ী সাজানো।',
+  features_h:'অ্যাপটি কী করতে পারে?',
+  features:['উল্টিয়ে মুখস্থ করার জন্য ফ্ল্যাশকার্ড','বিভিন্ন ক্রিয়াপদের কাল সহ বহুনির্বাচনী পরীক্ষা','জার্মান বিশেষ অক্ষর কীবোর্ড সহ লেখার পরীক্ষা','নিজের শব্দ তালিকা তৈরি করুন (যেমন পরীক্ষার জন্য)','প্রতিটি শব্দের জন্য উদাহরণ বাক্য','বহুভাষিক অনুবাদ (১৩টি ভাষা)','ভালো বোঝার জন্য ধীর পঠন'],
+  start_h:'কীভাবে শুরু করব?',
+  start:['অ্যাপটি খুলুন এবং আপনার মাতৃভাষা নির্বাচন করুন।','ইমেইল বা গুগল অ্যাকাউন্ট দিয়ে নিবন্ধন করুন।','সেটিংস → "মাস্টার ডাটাবেস থেকে আমদানি করুন"-এ যান।','স্তর এবং অধ্যায় নির্বাচন করুন এবং শব্দগুলো আপনার তালিকায় আমদানি করুন।'],
+  import_h:'আমার অ্যাকাউন্টে শব্দ স্থানান্তর করা',
+  import:['সেটিংসে "মাস্টার ডাটাবেস থেকে আমদানি করুন"-এ আলতো চাপুন।','শব্দের ধরন (বিশেষ্য/ক্রিয়া/বিশেষণ), স্তর এবং অধ্যায় অনুযায়ী ফিল্টার করুন।','"আমদানি করুন"-এ আলতো চাপুন — শব্দগুলো তাৎক্ষণিকভাবে আপনার তালিকায় উপস্থিত হবে।','আপনি যেকোনো সময় আরও অধ্যায় যোগ করতে পারেন।'],
+  cta:'অ্যাপ খুলুন →',
+  footer:'এই অ্যাপটি Claude (Anthropic) দিয়ে তৈরি করা হয়েছে। নতুন বৈশিষ্ট্যের জন্য কোনো ধারণা আছে?<br>আমাকে মেইল করুন: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+ru: {
+  title:'Deutsch Lernapp', subtitle:'Приложение с карточками слов для всей семьи',
+  intro:'"Я написал это приложение в отпуске, чтобы наша семья не забывала немецкие слова. Может быть, оно пригодится и вам — поэтому делюсь им здесь."',
+  what_h:'Что это?', what_p:'Это приложение содержит слова из учебников «Die neue Linie». Вы можете тренироваться с карточками, тестами с множественным выбором и письменными тестами — отсортированными по уровню учебника (A1.1–C2) и главе.',
+  features_h:'Что умеет приложение?',
+  features:['Карточки для переворачивания и запоминания','Тесты с множественным выбором с разными временами глаголов','Письменные тесты с клавиатурой немецких спецсимволов','Создание собственных списков слов (например, для экзамена)','Примеры предложений для каждого слова','Многоязычные переводы (13 языков)','Медленное чтение вслух для лучшего понимания'],
+  start_h:'Как начать?',
+  start:['Откройте приложение и выберите родной язык.','Зарегистрируйтесь по email или через аккаунт Google.','Перейдите в Настройки → «Импорт из базовой базы данных».','Выберите уровень и главу, импортируйте слова в свой список.'],
+  import_h:'Перенос слов в мой аккаунт',
+  import:['Нажмите «Импорт из базовой базы данных» в Настройках.','Отфильтруйте по типу слова (существительное/глагол/прилагательное), уровню и главе.','Нажмите «Импортировать» — слова сразу появятся в вашем списке.','Вы можете добавлять новые главы в любое время.'],
+  cta:'Открыть приложение →',
+  footer:'Это приложение создано с помощью Claude (Anthropic). Есть идеи для новых функций?<br>Напишите мне: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+uk: {
+  title:'Deutsch Lernapp', subtitle:'Застосунок з картками слів для всієї родини',
+  intro:'"Я написав цей застосунок у відпустці, щоб наша родина не забувала німецькі слова. Можливо, він знадобиться і вам — тому ділюся ним тут."',
+  what_h:'Що це?', what_p:'Цей застосунок містить слова з підручників «Die neue Linie». Ви можете тренуватися з картками, тестами з множинним вибором та письмовими тестами — відсортованими за рівнем підручника (A1.1–C2) та розділом.',
+  features_h:'Що вміє застосунок?',
+  features:['Картки для перегортання та запам\'ятовування','Тести з множинним вибором з різними часами дієслів','Письмові тести з клавіатурою німецьких спецсимволів','Створення власних списків слів (наприклад, для іспиту)','Приклади речень для кожного слова','Багатомовні переклади (13 мов)','Повільне читання вголос для кращого розуміння'],
+  start_h:'Як почати?',
+  start:['Відкрийте застосунок і виберіть рідну мову.','Зареєструйтеся через email або обліковий запис Google.','Перейдіть до Налаштувань → «Імпорт з базової бази даних».','Виберіть рівень та розділ, імпортуйте слова до свого списку.'],
+  import_h:'Перенесення слів до мого облікового запису',
+  import:['Натисніть «Імпорт з базової бази даних» у Налаштуваннях.','Відфільтруйте за типом слова (іменник/дієслово/прикметник), рівнем та розділом.','Натисніть «Імпортувати» — слова одразу з\'являться у вашому списку.','Ви можете додавати нові розділи будь-коли.'],
+  cta:'Відкрити застосунок →',
+  footer:'Цей застосунок створено за допомогою Claude (Anthropic). Маєте ідеї для нових функцій?<br>Напишіть мені: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+ps: {
+  title:'Deutsch Lernapp', subtitle:'د ټولې کورنۍ لپاره د لغتونو کارت اپلیکیشن',
+  intro:'"ما دا اپلیکیشن د رخصتیو په جریان کې ولیکله ترڅو زموږ کورنۍ د الماني لغتونه هير نه کړي. ښايي دا تاسو ته هم ګټور وي - له همدې امله یې دلته شریکوم."',
+  what_h:'دا څه شی دی؟', what_p:'دا اپلیکیشن د "Die neue Linie" کتابونو لغتونه لري. تاسو کولی شئ د لغتونو کارتونو، څو ګونی انتخاب ازموینو، او لیکلو ازموینو سره تمرین وکړئ - د کتاب کچې (A1.1–C2) او فصل له مخې ترتیب شوي.',
+  features_h:'اپلیکیشن څه کولی شي؟',
+  features:['د اړولو او زده کولو لپاره لغتونو کارتونه','د فعل د مختلفو زمانو سره څو ګونی انتخاب ازموینې','د الماني ځانګړي تورو کیبورډ سره لیکلو ازموینې','خپل لغتونو لیستونه جوړ کړئ (لکه د ازموینې لپاره)','د هر لغت لپاره مثال جملې','څو ژبیز ژباړې (13 ژبې)','د ښه پوهیدو لپاره ورو لوستل'],
+  start_h:'څنګه پیل وکړم؟',
+  start:['اپلیکیشن خلاص کړئ او خپله مورنۍ ژبه وټاکئ.','د بریښنالیک یا ګوګل حساب سره ثبت نوم وکړئ.','تنظیماتو ته لاړ شئ ← "د اصلي ډیټابیس څخه ایمپورت کول".','کچه او فصل وټاکئ، لغتونه خپل لیست ته ایمپورت کړئ.'],
+  import_h:'لغتونه زما حساب ته لیږدول',
+  import:['په تنظیماتو کې "د اصلي ډیټابیس څخه ایمپورت کول" کلیک کړئ.','د لغت ډول (نوم/فعل/صفت)، کچې او فصل له مخې فلټر کړئ.','"ایمپورت" کلیک کړئ - لغتونه سمدلاسه ستاسو په لیست کې ښکاره کیږي.','تاسو کولی شئ هر وخت نور فصلونه اضافه کړئ.'],
+  cta:'اپلیکیشن خلاص کړئ ←',
+  footer:'دا اپلیکیشن د Claude (Anthropic) سره جوړ شوی. د نویو ځانګړتیاوو لپاره مو نظر لرئ؟<br>ما ته ولیکئ: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+fa: {
+  title:'Deutsch Lernapp', subtitle:'یک اپلیکیشن کارت واژگان برای کل خانواده',
+  intro:'"این اپلیکیشن را در تعطیلات نوشتم تا خانواده‌مان لغات آلمانی را فراموش نکند. شاید برای شما هم مفید باشد - به همین دلیل آن را اینجا به اشتراک می‌گذارم."',
+  what_h:'این چیست؟', what_p:'این اپلیکیشن شامل واژگان کتاب‌های "Die neue Linie" است. می‌توانید با فلش‌کارت، آزمون چندگزینه‌ای و آزمون نوشتاری تمرین کنید - مرتب‌شده بر اساس سطح کتاب (A1.1–C2) و فصل.',
+  features_h:'این اپلیکیشن چه کاری می‌تواند انجام دهد؟',
+  features:['فلش‌کارت برای ورق زدن و حفظ کردن','آزمون چندگزینه‌ای با زمان‌های مختلف فعل','آزمون نوشتاری با صفحه‌کلید حروف ویژه آلمانی','ایجاد لیست واژگان شخصی (مثلاً برای امتحان)','جملات نمونه برای هر واژه','ترجمه چندزبانه (۱۳ زبان)','خواندن آهسته برای درک بهتر'],
+  start_h:'چگونه شروع کنم؟',
+  start:['اپلیکیشن را باز کرده و زبان مادری خود را انتخاب کنید.','با ایمیل یا حساب گوگل ثبت‌نام کنید.','به تنظیمات ← "وارد کردن از پایگاه داده اصلی" بروید.','سطح و فصل را انتخاب کرده و واژگان را به لیست خود وارد کنید.'],
+  import_h:'انتقال واژگان به حساب من',
+  import:['در تنظیمات روی "وارد کردن از پایگاه داده اصلی" بزنید.','بر اساس نوع واژه (اسم/فعل/صفت)، سطح و فصل فیلتر کنید.','روی "وارد کردن" بزنید - واژگان فوراً در لیست شما ظاهر می‌شوند.','می‌توانید هر زمان فصل‌های بیشتری اضافه کنید.'],
+  cta:'باز کردن اپلیکیشن ←',
+  footer:'این اپلیکیشن با Claude (Anthropic) ساخته شده است. ایده‌ای برای ویژگی‌های جدید دارید؟<br>برایم ایمیل بزنید: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+bg: {
+  title:'Deutsch Lernapp', subtitle:'Приложение с карти за дума за цялото семейство',
+  intro:'"Написах това приложение по време на ваканция, за да не забравя нашето семейство немските думи. Може би ще бъде полезно и за вас - затова го споделям тук."',
+  what_h:'Какво е това?', what_p:'Това приложение съдържа думите от учебниците „Die neue Linie“. Можете да тренирате с флашкарти, тестове с множествен избор и писмени тестове — сортирани по ниво на учебника (A1.1–C2) и глава.',
+  features_h:'Какво може приложението?',
+  features:['Флашкарти за обръщане и запомняне','Тестове с множествен избор с различни глаголни времена','Писмени тестове с клавиатура за немски специални знаци','Създаване на собствени списъци с думи (напр. за изпит)','Примерни изречения за всяка дума','Многоезични преводи (13 езика)','Бавно четене на глас за по-добро разбиране'],
+  start_h:'Как да започна?',
+  start:['Отворете приложението и изберете родния си език.','Регистрирайте се с имейл или Google акаунт.','Отидете в Настройки → „Импортиране от основна база данни“.','Изберете ниво и глава, импортирайте думите в своя списък.'],
+  import_h:'Прехвърляне на думи в моя акаунт',
+  import:['Натиснете „Импортиране от основна база данни“ в Настройки.','Филтрирайте по тип дума (съществително/глагол/прилагателно), ниво и глава.','Натиснете „Импортиране“ — думите се появяват веднага във вашия списък.','Можете да добавяте още глави по всяко време.'],
+  cta:'Отвори приложението →',
+  footer:'Това приложение е създадено с Claude (Anthropic). Имате идеи за нови функции?<br>Пишете ми: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+sr: {
+  title:'Deutsch Lernapp', subtitle:'Апликација са картицама речи за целу породицу',
+  intro:'"Написао сам ову апликацију на одмору да наша породица не би заборавила немачке речи. Можда ће бити корисна и вама - зато је делим овде."',
+  what_h:'Шта је ово?', what_p:'Ова апликација садржи речи из уџбеника „Die neue Linie“. Можете вежбати са картицама, тестовима вишеструког избора и писменим тестовима — сортираним по нивоу уџбеника (A1.1–C2) и поглављу.',
+  features_h:'Шта апликација може да уради?',
+  features:['Картице за окретање и памћење','Тестови вишеструког избора са различитим глаголским временима','Писмени тестови са тастатуром немачких специјалних знакова','Креирање сопствених листи речи (нпр. за испит)','Примери реченица за сваку реч','Вишејезични преводи (13 језика)','Споро читање наглас за боље разумевање'],
+  start_h:'Како да почнем?',
+  start:['Отворите апликацију и изаберите матерњи језик.','Региструјте се путем е-поште или Google налога.','Идите у Подешавања → „Увоз из главне базе података“.','Изаберите ниво и поглавље, увезите речи у своју листу.'],
+  import_h:'Пренос речи на мој налог',
+  import:['Додирните „Увоз из главне базе података“ у Подешавањима.','Филтрирајте по врсти речи (именица/глагол/придев), нивоу и поглављу.','Додирните „Увези“ — речи се одмах појављују у вашој листи.','Можете додати још поглавља у било ком тренутку.'],
+  cta:'Отвори апликацију →',
+  footer:'Ова апликација је направљена помоћу Claude (Anthropic). Имате идеје за нове функције?<br>Пишите ми: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+},
+hi: {
+  title:'Deutsch Lernapp', subtitle:'पूरे परिवार के लिए एक शब्द कार्ड ऐप',
+  intro:'"मैंने यह ऐप छुट्टियों में लिखा ताकि हमारा परिवार जर्मन शब्द न भूले। शायद यह आपके लिए भी उपयोगी हो - इसीलिए इसे यहाँ साझा कर रहा हूँ।"',
+  what_h:'यह क्या है?', what_p:'इस ऐप में "Die neue Linie" किताबों के शब्द हैं। आप फ्लैशकार्ड, बहुविकल्पीय परीक्षण और लेखन परीक्षण के साथ अभ्यास कर सकते हैं — किताब के स्तर (A1.1–C2) और अध्याय के अनुसार क्रमबद्ध।',
+  features_h:'ऐप क्या कर सकता है?',
+  features:['पलटने और याद करने के लिए फ्लैशकार्ड','विभिन्न क्रिया काल के साथ बहुविकल्पीय परीक्षण','जर्मन विशेष वर्ण कीबोर्ड के साथ लेखन परीक्षण','अपनी खुद की शब्द सूची बनाएं (जैसे परीक्षा के लिए)','हर शब्द के लिए उदाहरण वाक्य','बहुभाषी अनुवाद (13 भाषाएं)','बेहतर समझ के लिए धीमी आवाज़ में पढ़ना'],
+  start_h:'मैं कैसे शुरू करूं?',
+  start:['ऐप खोलें और अपनी मातृभाषा चुनें।','ईमेल या Google खाते से पंजीकरण करें।','सेटिंग्स → "मास्टर डेटाबेस से आयात करें" पर जाएं।','स्तर और अध्याय चुनें, शब्दों को अपनी सूची में आयात करें।'],
+  import_h:'मेरे खाते में शब्द स्थानांतरित करना',
+  import:['सेटिंग्स में "मास्टर डेटाबेस से आयात करें" पर टैप करें।','शब्द प्रकार (संज्ञा/क्रिया/विशेषण), स्तर और अध्याय के अनुसार फ़िल्टर करें।','"आयात करें" पर टैप करें — शब्द तुरंत आपकी सूची में दिखाई देते हैं।','आप किसी भी समय अधिक अध्याय जोड़ सकते हैं।'],
+  cta:'ऐप खोलें →',
+  footer:'यह ऐप Claude (Anthropic) के साथ बनाया गया है। नई सुविधाओं के लिए कोई विचार है?<br>मुझे मेल करें: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
+}
+};
+
+let currentLang = 'de';
+
+function renderFlagbar(){
+  const bar = document.getElementById('flagbar');
+  bar.innerHTML = LANGS.map(l => `
+    <button class="flag-btn${l.code===currentLang?' active':''}" data-code="${l.code}" onclick="setLang('${l.code}')">
+      <span>${l.flag}</span><span class="lbl">${l.name}</span>
+    </button>
+  `).join('');
+}
+
+function setLang(code){
+  currentLang = code;
+  const t = T[code] || T.de;
+  document.documentElement.lang = code;
+  document.documentElement.dir = RTL.includes(code) ? 'rtl' : 'ltr';
+
+  document.getElementById('t-title').textContent = t.title;
+  document.getElementById('t-subtitle').textContent = t.subtitle;
+  document.getElementById('t-intro').textContent = t.intro;
+
+  document.querySelector('#t-what-h span').textContent = t.what_h;
+  document.getElementById('t-what-p').textContent = t.what_p;
+
+  document.querySelector('#t-features-h span').textContent = t.features_h;
+  document.getElementById('t-features-list').innerHTML = t.features.map(f=>`<li>${f}</li>`).join('');
+
+  document.querySelector('#t-start-h span').textContent = t.start_h;
+  document.getElementById('t-start-steps').innerHTML = t.start.map((s,i)=>`
+    <div class="step"><div class="step-num">${i+1}</div><div class="step-txt">${s}</div></div>
+  `).join('');
+
+  document.querySelector('#t-import-h span').textContent = t.import_h;
+  document.getElementById('t-import-steps').innerHTML = t.import.map((s,i)=>`
+    <div class="step"><div class="step-num">${i+1}</div><div class="step-txt">${s}</div></div>
+  `).join('');
+
+  document.getElementById('t-cta').textContent = t.cta;
+  document.getElementById('t-footer').innerHTML = t.footer;
+
+  renderFlagbar();
+}
+
+renderFlagbar();
+setLang('de');
+</script>
+
+</body>
+</html>
