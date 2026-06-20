@@ -124,7 +124,15 @@ body{
   padding:18px 22px;
 }
 
-/* CTA Buton */
+.note{
+  font-family:-apple-system,'Segoe UI',sans-serif;
+  font-size:13.5px;color:var(--txt3);
+  text-align:center;
+  margin:-14px 0 22px;
+  padding:0 10px;
+}
+.note a{color:var(--ac);text-decoration:none}
+.note a:hover{text-decoration:underline}
 .cta{
   display:block;text-align:center;
   background:linear-gradient(135deg,var(--ac),#7F6FD0);
@@ -174,6 +182,7 @@ body{
   </div>
 
   <div class="quote" id="t-intro"></div>
+  <div class="note" id="t-note"></div>
 
   <div class="card">
     <h2 id="t-what-h">📖 <span></span></h2>
@@ -232,6 +241,7 @@ de: {
   import_h:'Wörter in mein Konto übertragen',
   import:['Tippe in den Einstellungen auf „Aus Masterdatenbank importieren“.','Filtere nach Wortart (Nomen/Verben/Adjektiv), Niveau und Kapitel.','Tippe auf „Importieren“ — die Wörter erscheinen sofort in deiner Liste.','Du kannst jederzeit weitere Kapitel hinzufügen.'],
   cta:'Zur App →',
+  note:'Da ich diese App gerade erst geschrieben habe, kann es noch Fehler geben oder manches ist nicht ganz benutzerfreundlich. Für Korrekturen und Verbesserungsvorschläge schreib mir gerne an <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'Diese App wurde mit Claude (Anthropic) entwickelt. Wünsche oder Ideen für neue Funktionen?<br>Schreib mir: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 tr: {
@@ -245,6 +255,7 @@ tr: {
   import_h:'Kelimeleri hesabıma aktarmak',
   import:['Ayarlar bölümünde "Ana veritabanından içe aktar"a dokunun.','Kelime türüne (isim/fiil/sıfat), seviyeye ve bölüme göre filtreleyin.','"İçe Aktar"a dokunun — kelimeler anında listenizde görünür.','İstediğiniz zaman yeni bölümler ekleyebilirsiniz.'],
   cta:'Uygulamaya Git →',
+  note:'Bu programı yeni yazdığım için programda hatalar olabilir veya çok kullanıcı dostu olmayabilir. Düzeltme ve iyileştirme önerileri için <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a> adresine mail atabilirsiniz.',
   footer:'Bu uygulama Claude (Anthropic) ile geliştirilmiştir. Yeni özellikler için dileğiniz mi var?<br>Bana yazın: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 en: {
@@ -258,6 +269,7 @@ en: {
   import_h:'Transferring words to my account',
   import:['Tap "Import from master database" in Settings.','Filter by word type (noun/verb/adjective), level, and chapter.','Tap "Import" — the words appear instantly in your list.','You can add more chapters anytime.'],
   cta:'Open the App →',
+  note:'Since I just built this app, there may still be bugs or things that aren\'t very user-friendly. For corrections and improvement ideas, feel free to email me at <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'This app was built with Claude (Anthropic). Have ideas for new features?<br>Email me: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 ar: {
@@ -271,6 +283,7 @@ ar: {
   import_h:'نقل الكلمات إلى حسابي',
   import:['اضغط على "استيراد من قاعدة البيانات الرئيسية" في الإعدادات.','صفِّ حسب نوع الكلمة (اسم/فعل/صفة) والمستوى والفصل.','اضغط على "استيراد" - تظهر الكلمات فورًا في قائمتك.','يمكنك إضافة المزيد من الفصول في أي وقت.'],
   cta:'افتح التطبيق ←',
+  note:'نظرًا لأنني كتبت هذا التطبيق للتو، قد تكون هناك أخطاء أو بعض الأمور غير سهلة الاستخدام. للتصحيحات واقتراحات التحسين، يمكنك مراسلتي على <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'تم تطوير هذا التطبيق باستخدام Claude (Anthropic). هل لديك أفكار لميزات جديدة؟<br>راسلني: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 ko: {
@@ -284,6 +297,7 @@ ko: {
   import_h:'내 계정으로 단어 가져오기',
   import:['설정에서 "마스터 데이터베이스에서 가져오기"를 누르세요.','품사(명사/동사/형용사), 레벨, 챕터로 필터링하세요.','"가져오기"를 누르세요 — 단어가 즉시 목록에 나타납니다.','언제든지 더 많은 챕터를 추가할 수 있습니다.'],
   cta:'앱 열기 →',
+  note:'이 앱을 막 만들었기 때문에 아직 오류가 있거나 사용하기 불편한 부분이 있을 수 있습니다. 수정 및 개선 제안은 <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>으로 메일 주세요.',
   footer:'이 앱은 Claude(Anthropic)로 제작되었습니다. 새로운 기능에 대한 아이디어가 있으신가요?<br>메일 주세요: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 es: {
@@ -297,6 +311,7 @@ es: {
   import_h:'Transferir palabras a mi cuenta',
   import:['Toca "Importar desde base de datos maestra" en Configuración.','Filtra por tipo de palabra (sustantivo/verbo/adjetivo), nivel y capítulo.','Toca "Importar" — las palabras aparecen al instante en tu lista.','Puedes añadir más capítulos en cualquier momento.'],
   cta:'Abrir la App →',
+  note:'Como acabo de crear esta app, puede que todavía tenga errores o que algunas cosas no sean muy intuitivas. Para correcciones y sugerencias de mejora, escríbeme a <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'Esta app fue creada con Claude (Anthropic). ¿Tienes ideas para nuevas funciones?<br>Escríbeme: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 bn: {
@@ -310,6 +325,7 @@ bn: {
   import_h:'আমার অ্যাকাউন্টে শব্দ স্থানান্তর করা',
   import:['সেটিংসে "মাস্টার ডাটাবেস থেকে আমদানি করুন"-এ আলতো চাপুন।','শব্দের ধরন (বিশেষ্য/ক্রিয়া/বিশেষণ), স্তর এবং অধ্যায় অনুযায়ী ফিল্টার করুন।','"আমদানি করুন"-এ আলতো চাপুন — শব্দগুলো তাৎক্ষণিকভাবে আপনার তালিকায় উপস্থিত হবে।','আপনি যেকোনো সময় আরও অধ্যায় যোগ করতে পারেন।'],
   cta:'অ্যাপ খুলুন →',
+  note:'যেহেতু আমি এই অ্যাপটি সবে তৈরি করেছি, তাই এতে এখনও ত্রুটি থাকতে পারে বা কিছু জিনিস ব্যবহারকারী-বান্ধব নাও হতে পারে। সংশোধন ও উন্নতির পরামর্শের জন্য আমাকে <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a> এ মেইল করতে পারেন।',
   footer:'এই অ্যাপটি Claude (Anthropic) দিয়ে তৈরি করা হয়েছে। নতুন বৈশিষ্ট্যের জন্য কোনো ধারণা আছে?<br>আমাকে মেইল করুন: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 ru: {
@@ -323,6 +339,7 @@ ru: {
   import_h:'Перенос слов в мой аккаунт',
   import:['Нажмите «Импорт из базовой базы данных» в Настройках.','Отфильтруйте по типу слова (существительное/глагол/прилагательное), уровню и главе.','Нажмите «Импортировать» — слова сразу появятся в вашем списке.','Вы можете добавлять новые главы в любое время.'],
   cta:'Открыть приложение →',
+  note:'Поскольку я только что написал это приложение, в нём ещё могут быть ошибки или что-то может быть не очень удобным. По вопросам исправлений и улучшений пишите мне на <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'Это приложение создано с помощью Claude (Anthropic). Есть идеи для новых функций?<br>Напишите мне: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 uk: {
@@ -336,6 +353,7 @@ uk: {
   import_h:'Перенесення слів до мого облікового запису',
   import:['Натисніть «Імпорт з базової бази даних» у Налаштуваннях.','Відфільтруйте за типом слова (іменник/дієслово/прикметник), рівнем та розділом.','Натисніть «Імпортувати» — слова одразу з\'являться у вашому списку.','Ви можете додавати нові розділи будь-коли.'],
   cta:'Відкрити застосунок →',
+  note:'Оскільки я щойно написав цей застосунок, у ньому ще можуть бути помилки або щось може бути не дуже зручним. Щодо виправлень і пропозицій з покращення пишіть мені на <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'Цей застосунок створено за допомогою Claude (Anthropic). Маєте ідеї для нових функцій?<br>Напишіть мені: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 ps: {
@@ -349,6 +367,7 @@ ps: {
   import_h:'لغتونه زما حساب ته لیږدول',
   import:['په تنظیماتو کې "د اصلي ډیټابیس څخه ایمپورت کول" کلیک کړئ.','د لغت ډول (نوم/فعل/صفت)، کچې او فصل له مخې فلټر کړئ.','"ایمپورت" کلیک کړئ - لغتونه سمدلاسه ستاسو په لیست کې ښکاره کیږي.','تاسو کولی شئ هر وخت نور فصلونه اضافه کړئ.'],
   cta:'اپلیکیشن خلاص کړئ ←',
+  note:'ځکه چې ما دا اپلیکیشن اوس نوی لیکلی، ممکن لاهم تېروتنې پکې وي یا ځینې شیان د کارونکي لپاره اسانه نه وي. د سمونونو او وړاندیزونو لپاره ما ته دې پته <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a> ته ایمیل ولیکئ.',
   footer:'دا اپلیکیشن د Claude (Anthropic) سره جوړ شوی. د نویو ځانګړتیاوو لپاره مو نظر لرئ؟<br>ما ته ولیکئ: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 fa: {
@@ -362,6 +381,7 @@ fa: {
   import_h:'انتقال واژگان به حساب من',
   import:['در تنظیمات روی "وارد کردن از پایگاه داده اصلی" بزنید.','بر اساس نوع واژه (اسم/فعل/صفت)، سطح و فصل فیلتر کنید.','روی "وارد کردن" بزنید - واژگان فوراً در لیست شما ظاهر می‌شوند.','می‌توانید هر زمان فصل‌های بیشتری اضافه کنید.'],
   cta:'باز کردن اپلیکیشن ←',
+  note:'از آنجا که این اپلیکیشن را تازه نوشته‌ام، ممکن است هنوز اشکالاتی داشته باشد یا برخی موارد چندان کاربرپسند نباشد. برای اصلاحات و پیشنهادات بهبود، می‌توانید به <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a> ایمیل بزنید.',
   footer:'این اپلیکیشن با Claude (Anthropic) ساخته شده است. ایده‌ای برای ویژگی‌های جدید دارید؟<br>برایم ایمیل بزنید: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 bg: {
@@ -375,6 +395,7 @@ bg: {
   import_h:'Прехвърляне на думи в моя акаунт',
   import:['Натиснете „Импортиране от основна база данни“ в Настройки.','Филтрирайте по тип дума (съществително/глагол/прилагателно), ниво и глава.','Натиснете „Импортиране“ — думите се появяват веднага във вашия списък.','Можете да добавяте още глави по всяко време.'],
   cta:'Отвори приложението →',
+  note:'Тъй като току-що написах това приложение, може все още да има грешки или нещо да не е много удобно за потребителя. За корекции и предложения за подобрение, пишете ми на <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'Това приложение е създадено с Claude (Anthropic). Имате идеи за нови функции?<br>Пишете ми: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 sr: {
@@ -388,6 +409,7 @@ sr: {
   import_h:'Пренос речи на мој налог',
   import:['Додирните „Увоз из главне базе података“ у Подешавањима.','Филтрирајте по врсти речи (именица/глагол/придев), нивоу и поглављу.','Додирните „Увези“ — речи се одмах појављују у вашој листи.','Можете додати још поглавља у било ком тренутку.'],
   cta:'Отвори апликацију →',
+  note:'Пошто сам тек написао ову апликацију, можда још увек има грешака или нешто није баш погодно за кориснике. За исправке и предлоге за побољшање, пишите ми на <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>.',
   footer:'Ова апликација је направљена помоћу Claude (Anthropic). Имате идеје за нове функције?<br>Пишите ми: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 },
 hi: {
@@ -401,6 +423,7 @@ hi: {
   import_h:'मेरे खाते में शब्द स्थानांतरित करना',
   import:['सेटिंग्स में "मास्टर डेटाबेस से आयात करें" पर टैप करें।','शब्द प्रकार (संज्ञा/क्रिया/विशेषण), स्तर और अध्याय के अनुसार फ़िल्टर करें।','"आयात करें" पर टैप करें — शब्द तुरंत आपकी सूची में दिखाई देते हैं।','आप किसी भी समय अधिक अध्याय जोड़ सकते हैं।'],
   cta:'ऐप खोलें →',
+  note:'चूंकि मैंने अभी यह ऐप बनाया है, इसमें अभी भी त्रुटियां हो सकती हैं या कुछ चीजें बहुत उपयोगकर्ता-अनुकूल नहीं हो सकती हैं। सुधार और बेहतरी के सुझावों के लिए <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a> पर मुझे मेल करें।',
   footer:'यह ऐप Claude (Anthropic) के साथ बनाया गया है। नई सुविधाओं के लिए कोई विचार है?<br>मुझे मेल करें: <a href="mailto:posta_kutusu@hotmail.com">posta_kutusu@hotmail.com</a>'
 }
 };
@@ -425,6 +448,7 @@ function setLang(code){
   document.getElementById('t-title').textContent = t.title;
   document.getElementById('t-subtitle').textContent = t.subtitle;
   document.getElementById('t-intro').textContent = t.intro;
+  document.getElementById('t-note').innerHTML = t.note || '';
 
   document.querySelector('#t-what-h span').textContent = t.what_h;
   document.getElementById('t-what-p').textContent = t.what_p;
