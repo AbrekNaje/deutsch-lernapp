@@ -1358,6 +1358,10 @@ textarea{resize:vertical;min-height:54px}
     <button class="gtab v" onclick="setListGrp('verb',this)">Verben</button>
     <button class="gtab a" onclick="setListGrp('adj',this)">Adjektiv</button>
   </div>
+  <div style="position:relative;margin-top:8px">
+    <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--txt2);font-size:18px;pointer-events:none"></i>
+    <input type="text" id="lf-search" placeholder="Wort suchen..." autocomplete="off" autocorrect="off" spellcheck="false" style="padding-left:40px" oninput="renderList()">
+  </div>
   <div class="grid2">
     <select id="lf-lv" onchange="updateLfChapters();renderList()"><option value="">Alle Stufen</option></select>
     <select id="lf-ch" onchange="renderList()"><option value="">Alle Kapitel</option></select>
@@ -2001,9 +2005,13 @@ function renderList(){
   const lv=document.getElementById('lf-lv').value;
   const ch=document.getElementById('lf-ch')?.value||'';
   const favOnly=document.getElementById('lf-fav')?.checked||false;
+  const q=document.getElementById('lf-search')?.value.trim().toLowerCase()||'';
   let filtered=w.filter(x=>{const ok=listGrp==='noun'?x.type==='noun':listGrp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron');return ok&&(!lv||x.level===lv)&&(!ch||x.chapter===ch);});
   if(favOnly){
     filtered=filtered.filter(x=>getWordListName(x._id)!==null);
+  }
+  if(q){
+    filtered=filtered.filter(x=>(x.word||'').toLowerCase().includes(q)||(x.tr||'').toLowerCase().includes(q));
   }
   document.getElementById('list-empty').classList.toggle('hidden',filtered.length>0);
   document.getElementById('wlist').innerHTML=filtered.map(x=>{
@@ -2018,7 +2026,7 @@ function renderList(){
 
 // ARAMA
 function doSearch(){const q=document.getElementById('search-inp').value.trim().toLowerCase();const res=document.getElementById('search-results');const empty=document.getElementById('search-empty');const hint=document.getElementById('search-hint');if(!q){res.innerHTML='';empty.classList.add('hidden');hint.classList.remove('hidden');return;}hint.classList.add('hidden');const w=window._words||[];const found=w.filter(x=>(x.word||'').toLowerCase().includes(q)||(x.tr||'').toLowerCase().includes(q));if(!found.length){res.innerHTML='';empty.classList.remove('hidden');return;}empty.classList.add('hidden');res.innerHTML=found.map(x=>buildSearchCard(x)).join('');}
-function buildSearchCard(w){const typeLabel=w.type==='noun'?'Nomen':w.type==='verb'?'Verb':w.type==='pron'?'Pronomen':'Adjektiv';const typeClass=w.type==='noun'?'noun':w.type==='verb'?'verb':'adj';let rows='';const row=(lbl,val)=>val?'<div class="search-row"><span class="search-row-lbl">'+lbl+'</span><span class="search-row-val">'+val+'</span></div>':'';if(w.type==='noun'){rows+=row('Singular',w.word);rows+=row('Plural',w.plural||'—');rows+=row('Türkisch',w.tr);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else if(w.type==='verb'){rows+=row('Infinitiv',w.word);rows+=row('Türkisch',w.tr);if(w.praesens){rows+=row('ich',w.praesens.ich);rows+=row('du',w.praesens.du);rows+=row('er/sie/es',w.praesens.er);rows+=row('wir',w.praesens.wir);rows+=row('ihr',w.praesens.ihr);rows+=row('sie/Sie',w.praesens.sie);}rows+=row('Perfekt',w.perfekt);rows+=row('Präteritum',w.praeteritum);rows+=row('Futur I',w.futur1);rows+=row('Futur II',w.futur2);rows+=row('Plusquamperfekt',w.plusquam);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else{rows+=row('Wort',w.word);rows+=row('Türkisch',w.tr);rows+=row('Zusatzinfo',w.extra);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}rows+=row('Benutzer',w.kullanici);return'<div class="search-card"><div class="search-card-header"><span class="search-card-word">'+w.word+'</span><span class="search-card-type '+typeClass+'">'+typeLabel+'</span></div>'+rows+'</div>';}
+function buildSearchCard(w){const typeLabel=w.type==='noun'?'Nomen':w.type==='verb'?'Verb':w.type==='pron'?'Pronomen':'Adjektiv';const typeClass=w.type==='noun'?'noun':w.type==='verb'?'verb':'adj';let rows='';const row=(lbl,val)=>val?'<div class="search-row"><span class="search-row-lbl">'+lbl+'</span><span class="search-row-val">'+val+'</span></div>':'';if(w.type==='noun'){rows+=row('Singular',w.word);rows+=row('Plural',w.plural||'—');rows+=row('Türkisch',w.tr);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else if(w.type==='verb'){rows+=row('Infinitiv',w.word);rows+=row('Türkisch',w.tr);if(w.praesens){rows+=row('ich',w.praesens.ich);rows+=row('du',w.praesens.du);rows+=row('er/sie/es',w.praesens.er);rows+=row('wir',w.praesens.wir);rows+=row('ihr',w.praesens.ihr);rows+=row('sie/Sie',w.praesens.sie);}rows+=row('Perfekt',w.perfekt);rows+=row('Präteritum',w.praeteritum);rows+=row('Futur I',w.futur1);rows+=row('Futur II',w.futur2);rows+=row('Plusquamperfekt',w.plusquam);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}else{rows+=row('Wort',w.word);rows+=row('Türkisch',w.tr);rows+=row('Zusatzinfo',w.extra);rows+=row('Stufe',w.level);rows+=row('Kapitel',w.chapter);}rows+=row('Benutzer',w.kullanici);const isFav=getWordListName(w._id)!==null;const heartIcon=isFav?'ti-heart-filled':'ti-heart';const heartColor=isFav?'#E0457B':'var(--txt3)';const favBtn='<button class="btn sm" style="font-size:18px;padding:3px 7px;color:'+heartColor+'" onclick="event.stopPropagation();openListPicker(\'' + w._id + '\',\'' + w._col + '\')" title="Favorit"><i class="ti '+heartIcon+'"></i></button>';return'<div class="search-card"><div class="search-card-header"><span class="search-card-word">'+w.word+'</span><span style="display:flex;align-items:center;gap:6px"><span class="search-card-type '+typeClass+'">'+typeLabel+'</span>'+favBtn+'</span></div>'+rows+'</div>';}
 
 // SES
 function speak(t,slow){if(!t)return;const u=new SpeechSynthesisUtterance(t);u.lang='de-DE';u.rate=slow?0.3:0.85;speechSynthesis.cancel();speechSynthesis.speak(u);}
