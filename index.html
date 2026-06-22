@@ -649,6 +649,308 @@ window.loadListItems = async function loadListItems(listId) {
   if (res.success) window._listItems[listId] = res.items;
 }
 
+// ============================================================
+// AUSSPRACHETEST
+// ============================================================
+let spGrp='noun', spDeck=[], spIdx=0, spCorr=0, spWrong=[];
+let spRecording=false, spToken=null, spRegion='swedencentral';
+let spType='word'; // 'word' veya 'sentence'
+let mediaRecorder=null, audioChunks=[];
+
+function startSpeech(grp){
+  spGrp=grp;
+  document.getElementById('sp-setup-title').textContent=
+    grp==='noun'?'Nomen – Aussprachetest':grp==='verb'?'Verben – Aussprachetest':'Adjektiv – Aussprachetest';
+  fillLevels('spf-level',grpPool(grp));
+  document.getElementById('spf-chapter').innerHTML='<option value="">Alle</option>';
+  updateSpChapters();
+  if(window.fillListSelects)window.fillListSelects();
+  const spfList=document.getElementById('spf-list');
+  if(spfList&&window._wordLists){
+    spfList.innerHTML='<option value="">Alle Wörter</option>'+
+      window._wordLists.map(l=>`<option value="${l.Id}">${l.ListName}</option>`).join('');
+  }
+  go('s-spsetup');
+}
+
+function updateSpChapters(){
+  const pool=grpPool(spGrp);
+  const lv=document.getElementById('spf-level').value;
+  const filtered=lv?pool.filter(w=>w.level===lv):pool;
+  fillChapters('spf-chapter',filtered);
+  updateSpCount();
+}
+
+function updateSpCount(){
+  const lv=document.getElementById('spf-level').value;
+  const ch=document.getElementById('spf-chapter').value;
+  const n=applyFilter(grpPool(spGrp),lv,ch).length;
+  document.getElementById('spf-count').textContent=n+' Wörter entsprechen diesem Filter';
+}
+
+async function beginSpeech(){
+  const lv=document.getElementById('spf-level').value;
+  const ch=document.getElementById('spf-chapter').value;
+  const listId=document.getElementById('spf-list').value;
+  spType=document.querySelector('input[name="sp-type"]:checked').value;
+  let pool=applyFilter(grpPool(spGrp),lv,ch);
+  if(listId&&window._listItems&&window._listItems[listId]){
+    const items=window._listItems[listId];
+    pool=pool.filter(w=>items.some(i=>i.WordId===w._id));
+  }
+  if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}
+
+  spDeck=pool.sort(()=>Math.random()-.5).slice(0,10);
+  spIdx=0;spCorr=0;spWrong=[];
+
+  // Speech token al
+  showLoading('Sprachdienst wird verbunden...',30);
+  try{
+    const res=await fetch(window._AZURE_API+'/speech-token');
+    const data=await res.json();
+    if(data.token){spToken=data.token;spRegion=data.region||'swedencentral';}
+    else throw new Error('Token alınamadı');
+  }catch(e){
+    hideLoading();
+    alert('Sprachdienst nicht verfügbar: '+e.message);
+    return;
+  }
+  hideLoading();
+  go('s-speech');
+  showSpeech();
+}
+
+async function showSpeech(){
+  const w=spDeck[spIdx];
+  document.getElementById('sp-ctr').textContent=(spIdx+1)+'/'+spDeck.length;
+  document.getElementById('sp-prog').style.width=(spIdx/spDeck.length*100)+'%';
+  document.getElementById('sp-result').classList.add('hidden');
+  document.getElementById('sp-next-bar').style.display='none';
+  document.getElementById('sp-fav-bar').classList.add('hidden');
+  document.getElementById('sp-wave').classList.add('hidden');
+  document.getElementById('sp-status').textContent='Taste drücken und sprechen';
+  document.getElementById('sp-mic-btn').style.background='var(--ac)';
+
+  if(spType==='sentence'){
+    // Örnek cümle yükle
+    document.getElementById('sp-label').textContent='Sprich diesen Satz aus:';
+    const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
+    document.getElementById('sp-word').textContent='...';
+    document.getElementById('sp-tr').textContent='';
+    fetch(window._AZURE_API+'/words?action=getSentences&almancaKelime='+encodeURIComponent(w.word)+'&dil='+anaAil)
+      .then(r=>r.json()).then(res=>{
+        if(res.success&&res.sentences.length){
+          const s=res.sentences[Math.floor(Math.random()*Math.min(res.sentences.length,3))];
+          document.getElementById('sp-word').textContent=s.AlmancaCumle;
+          document.getElementById('sp-tr').textContent=s.CeviriCumle||'';
+          w._spSentence=s.AlmancaCumle;
+        } else {
+          document.getElementById('sp-word').textContent=w.word;
+          document.getElementById('sp-tr').textContent=w.tr||'';
+          w._spSentence=null;
+        }
+      });
+  } else {
+    document.getElementById('sp-label').textContent='Sprich das folgende Wort aus:';
+    document.getElementById('sp-word').textContent=w.word;
+    document.getElementById('sp-tr').textContent=w.tr||'';
+    w._spSentence=null;
+  }
+  if(window.updateFavBtn)window.updateFavBtn('sp-fav-btn',w._id);
+}
+
+async function toggleRecording(){
+  if(spRecording){
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+async function startRecording(){
+  spRecording=true;
+  audioChunks=[];
+  document.getElementById('sp-mic-btn').style.background='#E0457B';
+  document.getElementById('sp-status').textContent='Aufnahme läuft... (nochmal tippen zum Stoppen)';
+  document.getElementById('sp-wave').classList.remove('hidden');
+  document.getElementById('sp-result').classList.add('hidden');
+
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder=new MediaRecorder(stream,{mimeType:'audio/webm'});
+    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+    mediaRecorder.onstop=async()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      await analyzePronunciation();
+    };
+    mediaRecorder.start();
+  }catch(e){
+    spRecording=false;
+    document.getElementById('sp-mic-btn').style.background='var(--ac)';
+    document.getElementById('sp-status').textContent='Mikrofon konnte nicht geöffnet werden: '+e.message;
+  }
+}
+
+function stopRecording(){
+  spRecording=false;
+  document.getElementById('sp-mic-btn').style.background='var(--ac)';
+  document.getElementById('sp-status').textContent='Wird analysiert...';
+  document.getElementById('sp-wave').classList.add('hidden');
+  if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();
+}
+
+async function analyzePronunciation(){
+  const w=spDeck[spIdx];
+  const refText=w._spSentence||w.word;
+
+  try{
+    const audioBlob=new Blob(audioChunks,{type:'audio/webm'});
+    // WebM'i WAV'a dönüştür
+    const arrayBuffer=await audioBlob.arrayBuffer();
+    const audioCtx=new AudioContext();
+    const decoded=await audioCtx.decodeAudioData(arrayBuffer);
+    const wavBuffer=encodeWAV(decoded);
+    const wavBlob=new Blob([wavBuffer],{type:'audio/wav'});
+
+    // Azure Pronunciation Assessment API'ye gönder
+    const pronunciationConfig=JSON.stringify({
+      ReferenceText:refText,
+      GradingSystem:'HundredMark',
+      Granularity:'Phoneme',
+      EnableMiscue:true
+    });
+    const b64Config=btoa(unescape(encodeURIComponent(pronunciationConfig)));
+
+    const url=`https://${spRegion}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=de-DE&format=detailed`;
+
+    const response=await fetch(url,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+spToken,
+        'Content-Type':'audio/wav; codecs=audio/pcm; samplerate=16000',
+        'Pronunciation-Assessment':b64Config,
+        'Accept':'application/json'
+      },
+      body:wavBlob
+    });
+
+    const result=await response.json();
+    showSpeechResult(result,refText);
+  }catch(e){
+    document.getElementById('sp-status').textContent='Analysefehler: '+e.message;
+    document.getElementById('sp-next-bar').style.display='flex';
+  }
+}
+
+function showSpeechResult(result, refText){
+  document.getElementById('sp-result').classList.remove('hidden');
+  document.getElementById('sp-next-bar').style.display='flex';
+  document.getElementById('sp-fav-bar').classList.remove('hidden');
+
+  const recognized=result.DisplayText||result.RecognitionStatus||'(nicht erkannt)';
+  document.getElementById('sp-recognized').textContent=recognized;
+
+  const pa=result.NBest&&result.NBest[0]&&result.NBest[0].PronunciationAssessment;
+  if(!pa){
+    document.getElementById('sp-score-pct').textContent='–';
+    document.getElementById('sp-detail').innerHTML='<span style="color:var(--txt2);font-size:13px">Keine Bewertung verfügbar</span>';
+    document.getElementById('sp-status').textContent='Analyse abgeschlossen';
+    return;
+  }
+
+  const accuracy=Math.round(pa.AccuracyScore||0);
+  const fluency=Math.round(pa.FluencyScore||0);
+  const completeness=Math.round(pa.CompletenessScore||0);
+  const overall=Math.round(pa.PronScore||((accuracy+fluency+completeness)/3));
+
+  // Ana skor
+  document.getElementById('sp-score-pct').textContent=overall+'%';
+  const bar=document.getElementById('sp-score-bar');
+  bar.style.width=overall+'%';
+  bar.style.background=overall>=80?'#28a745':overall>=60?'#ffc107':'#dc3545';
+
+  // Detay skorları
+  document.getElementById('sp-detail').innerHTML=
+    `<div class="sp-detail-chip">Genauigkeit <span>${accuracy}%</span></div>`+
+    `<div class="sp-detail-chip">Flüssigkeit <span>${fluency}%</span></div>`+
+    `<div class="sp-detail-chip">Vollständigkeit <span>${completeness}%</span></div>`;
+
+  // Fonem analizi
+  const words=result.NBest&&result.NBest[0]&&result.NBest[0].Words;
+  if(words){
+    let phonemeHtml='';
+    words.forEach(word=>{
+      if(word.Phonemes){
+        word.Phonemes.forEach(ph=>{
+          const score=Math.round(ph.PronunciationAssessment?.AccuracyScore||0);
+          const cls=score>=80?'good':score>=60?'mid':'bad';
+          phonemeHtml+=`<span class="sp-phoneme ${cls}" title="${score}%">${ph.Phoneme}</span>`;
+        });
+        phonemeHtml+=' ';
+      }
+    });
+    document.getElementById('sp-phonemes').innerHTML=phonemeHtml;
+  }
+
+  document.getElementById('sp-status').textContent=
+    overall>=80?'Sehr gut! 🎉':overall>=60?'Gut gemacht! 👍':'Weiter üben! 💪';
+
+  // İstatistik güncelle
+  const wo=spDeck[spIdx];
+  const orig=(window._words||[]).find(x=>x._id===wo._id);
+  if(orig){
+    if(overall>=60){orig.correct=(orig.correct||0)+1;orig.streak=(orig.streak||0)+1;}
+    else{orig.wrong=(orig.wrong||0)+1;orig.streak=0;}
+    updateStats(orig);
+  }
+}
+
+function encodeWAV(audioBuffer){
+  const numChannels=1;
+  const sampleRate=16000;
+  const bitsPerSample=16;
+  const length=audioBuffer.duration*sampleRate;
+  const buffer=new ArrayBuffer(44+length*2);
+  const view=new DataView(buffer);
+  // WAV header
+  const writeStr=(offset,str)=>{for(let i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i));};
+  writeStr(0,'RIFF');view.setUint32(4,36+length*2,true);writeStr(8,'WAVE');
+  writeStr(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);
+  view.setUint16(22,numChannels,true);view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*numChannels*bitsPerSample/8,true);
+  view.setUint16(32,numChannels*bitsPerSample/8,true);view.setUint16(34,bitsPerSample,true);
+  writeStr(36,'data');view.setUint32(40,length*2,true);
+  // Ses verisi — orijinal sample rate'den 16000'e resample
+  const srcData=audioBuffer.getChannelData(0);
+  const ratio=audioBuffer.sampleRate/sampleRate;
+  let offset=44;
+  for(let i=0;i<length;i++){
+    const srcIdx=Math.min(Math.floor(i*ratio),srcData.length-1);
+    const s=Math.max(-1,Math.min(1,srcData[srcIdx]));
+    view.setInt16(offset,s<0?s*0x8000:s*0x7FFF,true);
+    offset+=2;
+  }
+  return buffer;
+}
+
+function retrySpeech(){
+  document.getElementById('sp-result').classList.add('hidden');
+  document.getElementById('sp-next-bar').style.display='none';
+  document.getElementById('sp-fav-bar').classList.add('hidden');
+  document.getElementById('sp-status').textContent='Taste drücken und sprechen';
+}
+
+function nextSpeech(){
+  spIdx++;
+  if(spIdx>=spDeck.length){
+    // Sonuç ekranına git
+    go('s-home');
+    toast('Test abgeschlossen! 🎉');
+  } else {
+    showSpeech();
+  }
+}
+
 window.downloadCSVTemplate = function(grp) {
   let content='', filename='';
   if(grp==='noun'){
@@ -783,6 +1085,19 @@ textarea{resize:vertical;min-height:54px}
 .loading-overlay.show{display:flex}
 .loading-box{background:var(--bg);border-radius:var(--radlg);padding:1.5rem 2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
 @keyframes hourglass{0%{transform:rotate(0deg)}40%{transform:rotate(0deg)}50%{transform:rotate(180deg)}90%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+.wave-bar{width:4px;border-radius:99px;background:var(--ac);animation:wave 0.8s ease-in-out infinite}
+.wave-bar:nth-child(1){animation-delay:0s;height:16px}
+.wave-bar:nth-child(2){animation-delay:.1s;height:28px}
+.wave-bar:nth-child(3){animation-delay:.2s;height:36px}
+.wave-bar:nth-child(4){animation-delay:.1s;height:28px}
+.wave-bar:nth-child(5){animation-delay:0s;height:16px}
+@keyframes wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(0.4)}}
+.sp-detail-chip{background:var(--bg);border:1px solid var(--brd);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--txt2)}
+.sp-detail-chip span{font-weight:600;color:var(--ac)}
+.sp-phoneme{display:inline-block;padding:2px 4px;border-radius:4px;margin:2px;font-size:14px}
+.sp-phoneme.good{background:#d4edda;color:#155724}
+.sp-phoneme.mid{background:#fff3cd;color:#856404}
+.sp-phoneme.bad{background:#f8d7da;color:#721c24}
 .lookup-wrap{position:relative}
 .lookup-new{display:none;margin-top:6px;gap:6px}
 .lookup-new.show{display:flex}
@@ -984,6 +1299,12 @@ textarea{resize:vertical;min-height:54px}
     <button class="ncard" onclick="startWrite('noun')"><i class="ti ti-keyboard" style="color:#185FA5"></i><div class="nt">Nomen</div></button>
     <button class="ncard" onclick="startWrite('verb')"><i class="ti ti-keyboard" style="color:#854F0B"></i><div class="nt">Verben</div></button>
     <button class="ncard" onclick="startWrite('adj')"><i class="ti ti-keyboard" style="color:#3B6D11"></i><div class="nt">Adjektiv</div></button>
+  </div>
+  <div style="font-size:15px;font-weight:500;color:var(--txt2)">Aussprachetest 🎤</div>
+  <div class="grid3">
+    <button class="ncard" onclick="startSpeech('noun')"><i class="ti ti-microphone" style="color:#185FA5"></i><div class="nt">Nomen</div></button>
+    <button class="ncard" onclick="startSpeech('verb')"><i class="ti ti-microphone" style="color:#854F0B"></i><div class="nt">Verben</div></button>
+    <button class="ncard" onclick="startSpeech('adj')"><i class="ti ti-microphone" style="color:#3B6D11"></i><div class="nt">Adjektiv</div></button>
   </div>
   <button class="btn" onclick="loadWords()" style="font-size:15px"><i class="ti ti-refresh"></i> Aktualisieren</button>
 </div>
@@ -1320,6 +1641,84 @@ textarea{resize:vertical;min-height:54px}
     <div style="font-size:13px;color:var(--txt2)">Die türkische Bedeutung wird gegeben, schreibe es auf Deutsch.</div>
   </div>
   <button class="btn pri" onclick="beginWrite()"><i class="ti ti-player-play"></i> Test starten</button>
+</div>
+
+<!-- KONUŞMA TESTİ SETUP -->
+<div id="s-spsetup" class="scr">
+  <div class="topbar"><button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button><h1 id="sp-setup-title">Aussprachetest</h1></div>
+  <div class="step-box">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px"><i class="ti ti-filter" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Filter</div>
+    <div class="grid2">
+      <div><span class="lbl">Stufe</span><select id="spf-level" onchange="updateSpChapters()"><option value="">Alle</option></select></div>
+      <div><span class="lbl">Kapitel</span><select id="spf-chapter"><option value="">Alle</option></select></div>
+    </div>
+    <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="spf-list"><option value="">Alle Wörter</option></select></div>
+    <div style="margin-top:12px"><span class="lbl">Test türü</span>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <label><input type="radio" name="sp-type" value="word" checked> Einzelwörter</label>
+        <label><input type="radio" name="sp-type" value="sentence"> Beispielsätze</label>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="spf-count"></div>
+  </div>
+  <button class="btn pri" onclick="beginSpeech()"><i class="ti ti-microphone"></i> Test starten</button>
+</div>
+
+<!-- KONUŞMA TESTİ -->
+<div id="s-speech" class="scr">
+  <div class="topbar"><button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button><h1>Aussprachetest</h1><span class="badge" id="sp-ctr">1/10</span></div>
+  <div class="progbar"><div class="progfill" id="sp-prog" style="width:0%"></div></div>
+
+  <div style="text-align:center;padding:16px 0 8px">
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:6px" id="sp-label">Sprich das folgende Wort aus:</div>
+    <div style="font-size:32px;font-weight:700;color:var(--txt);margin-bottom:4px" id="sp-word"></div>
+    <div style="font-size:14px;color:var(--txt2)" id="sp-tr"></div>
+  </div>
+
+  <!-- Mikrofon butonu -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 0">
+    <button id="sp-mic-btn" onclick="toggleRecording()" style="width:80px;height:80px;border-radius:50%;border:none;background:var(--ac);color:#fff;font-size:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(83,74,183,0.4);transition:all .2s">
+      <i class="ti ti-microphone"></i>
+    </button>
+    <div id="sp-status" style="font-size:13px;color:var(--txt2)">Taste drücken und sprechen</div>
+
+    <!-- Ses dalgası animasyonu -->
+    <div id="sp-wave" class="hidden" style="display:flex;gap:4px;align-items:center;height:40px">
+      <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      <div class="wave-bar"></div><div class="wave-bar"></div>
+    </div>
+  </div>
+
+  <!-- Sonuç -->
+  <div id="sp-result" class="hidden" style="background:var(--bg2);border-radius:var(--rad);padding:16px;margin:8px 0;text-align:center">
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:8px">Erkannt:</div>
+    <div style="font-size:18px;font-weight:500;color:var(--txt);margin-bottom:16px" id="sp-recognized"></div>
+
+    <!-- Puan göstergesi -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--txt2);margin-bottom:4px">
+        <span>Aussprache</span><span id="sp-score-pct">0%</span>
+      </div>
+      <div style="height:12px;background:var(--bg);border-radius:99px;overflow:hidden">
+        <div id="sp-score-bar" style="height:100%;border-radius:99px;background:var(--ac);width:0%;transition:width .6s ease"></div>
+      </div>
+    </div>
+
+    <!-- Detay skorları -->
+    <div id="sp-detail" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px"></div>
+
+    <!-- Fonem analizi -->
+    <div id="sp-phonemes" style="font-size:14px;letter-spacing:2px;margin-bottom:8px"></div>
+  </div>
+
+  <div id="sp-fav-bar" class="hidden" style="display:flex;justify-content:center;margin-bottom:8px">
+    <button class="btn sm" onclick="openListPicker(spDeck[spIdx]._id,spDeck[spIdx]._col)" style="font-size:16px"><i class="ti ti-heart"></i> Zur Wortliste</button>
+  </div>
+
+  <div class="brow" id="sp-next-bar" style="display:none">
+    <button class="btn" onclick="retrySpeech()"><i class="ti ti-refresh"></i> Nochmal</button>
+    <button class="btn pri" onclick="nextSpeech()">Weiter <i class="ti ti-arrow-right"></i></button>
+  </div>
 </div>
 
 <!-- YAZILI TEST -->
