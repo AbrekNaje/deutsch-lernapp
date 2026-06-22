@@ -835,7 +835,6 @@ async function analyzePronunciation(){
     });
 
     const result=await response.json();
-    console.log('Speech API result:', JSON.stringify(result));
     showSpeechResult(result,refText);
   }catch(e){
     document.getElementById('sp-status').textContent='Analysefehler: '+e.message;
@@ -848,21 +847,23 @@ function showSpeechResult(result, refText){
   document.getElementById('sp-next-bar').style.display='flex';
   document.getElementById('sp-fav-bar').classList.remove('hidden');
 
-  const recognized=result.DisplayText||result.RecognitionStatus||'(nicht erkannt)';
+  const recognized=result.DisplayText||'(nicht erkannt)';
   document.getElementById('sp-recognized').textContent=recognized;
 
-  const pa=result.NBest&&result.NBest[0]&&result.NBest[0].PronunciationAssessment;
-  if(!pa){
+  const nbest=result.NBest&&result.NBest[0];
+  if(!nbest){
     document.getElementById('sp-score-pct').textContent='–';
     document.getElementById('sp-detail').innerHTML='<span style="color:var(--txt2);font-size:13px">Keine Bewertung verfügbar</span>';
     document.getElementById('sp-status').textContent='Analyse abgeschlossen';
     return;
   }
 
-  const accuracy=Math.round(pa.AccuracyScore||0);
-  const fluency=Math.round(pa.FluencyScore||0);
-  const completeness=Math.round(pa.CompletenessScore||0);
-  const overall=Math.round(pa.PronScore||((accuracy+fluency+completeness)/3));
+  // Skor doğrudan NBest[0] içinde
+  const accuracy=Math.round(nbest.AccuracyScore||0);
+  // Kelime bazlı ortalama al
+  const words=nbest.Words||[];
+  const fluency=words.length>0?Math.round(words.reduce((s,w)=>s+(w.AccuracyScore||0),0)/words.length):accuracy;
+  const overall=Math.round((accuracy+fluency)/2);
 
   // Ana skor
   document.getElementById('sp-score-pct').textContent=overall+'%';
@@ -873,23 +874,32 @@ function showSpeechResult(result, refText){
   // Detay skorları
   document.getElementById('sp-detail').innerHTML=
     `<div class="sp-detail-chip">Genauigkeit <span>${accuracy}%</span></div>`+
-    `<div class="sp-detail-chip">Flüssigkeit <span>${fluency}%</span></div>`+
-    `<div class="sp-detail-chip">Vollständigkeit <span>${completeness}%</span></div>`;
+    `<div class="sp-detail-chip">Konfidenz <span>${Math.round((nbest.Confidence||0)*100)}%</span></div>`;
 
-  // Fonem analizi
-  const words=result.NBest&&result.NBest[0]&&result.NBest[0].Words;
-  if(words){
+  // Hece bazında renkli gösterim
+  if(words.length){
     let phonemeHtml='';
     words.forEach(word=>{
-      if(word.Phonemes){
-        word.Phonemes.forEach(ph=>{
-          const score=Math.round(ph.PronunciationAssessment?.AccuracyScore||0);
-          const cls=score>=80?'good':score>=60?'mid':'bad';
-          phonemeHtml+=`<span class="sp-phoneme ${cls}" title="${score}%">${ph.Phoneme}</span>`;
+      const syllables=word.Syllables||[];
+      if(syllables.length>0){
+        syllables.forEach(syl=>{
+          const score=syl.AccuracyScore||0;
+          const bg=score>=80?'#d4edda':score>=50?'#fff3cd':'#f8d7da';
+          const color=score>=80?'#155724':score>=50?'#856404':'#721c24';
+          phonemeHtml+=`<span style="display:inline-block;padding:3px 7px;margin:2px;border-radius:6px;background:${bg};color:${color};font-weight:600;font-size:17px" title="${Math.round(score)}%">${syl.Grapheme}</span>`;
         });
-        phonemeHtml+=' ';
+      } else {
+        const score=word.AccuracyScore||0;
+        const bg=score>=80?'#d4edda':score>=50?'#fff3cd':'#f8d7da';
+        const color=score>=80?'#155724':score>=50?'#856404':'#721c24';
+        phonemeHtml+=`<span style="display:inline-block;padding:3px 7px;margin:2px;border-radius:6px;background:${bg};color:${color};font-weight:600;font-size:17px" title="${Math.round(score)}%">${word.Word}</span>`;
       }
+      phonemeHtml+='<span style="margin:0 2px"> </span>';
     });
+    phonemeHtml+='<div style="font-size:11px;color:var(--txt3);margin-top:8px;display:flex;gap:8px;justify-content:center">'+
+      '<span style="color:#155724">■ ≥80%</span>'+
+      '<span style="color:#856404">■ 50–79%</span>'+
+      '<span style="color:#721c24">■ &lt;50%</span></div>';
     document.getElementById('sp-phonemes').innerHTML=phonemeHtml;
   }
 
@@ -902,7 +912,7 @@ function showSpeechResult(result, refText){
   if(orig){
     if(overall>=60){orig.correct=(orig.correct||0)+1;orig.streak=(orig.streak||0)+1;}
     else{orig.wrong=(orig.wrong||0)+1;orig.streak=0;}
-    updateStats(orig);
+    if(window._azureCall)window._azureCall({action:'update',userId:window._currentUser.uid,_id:wo._id,_col:wo._col,correct:orig.correct,wrong:orig.wrong,streak:orig.streak});
   }
 }
 
