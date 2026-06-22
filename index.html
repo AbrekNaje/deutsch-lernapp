@@ -984,6 +984,221 @@ function nextSpeech(){
   }
 }
 
+// ============================================================
+// LESETEST (Metin okuma testi)
+// ============================================================
+let ttAudioChunks=[], ttMediaRecorder=null, ttRecording=false, ttCurrentText=null;
+
+window.openTextSetup = async function() {
+  go('s-textsetup');
+  showLoading('Texte werden geladen...',30);
+  try {
+    const res = await azureCall({ action: 'getTexts', seviye: 'all', bolum: 'all' });
+    if (res.success) {
+      // Seviye ve bölüm filtrelerini doldur
+      const seviyeler=[...new Set(res.texts.map(t=>t.Seviye).filter(Boolean))].sort();
+      const bolumler=[...new Set(res.texts.map(t=>t.Bolum).filter(Boolean))].sort();
+      const lvSel=document.getElementById('tf-level');
+      const chSel=document.getElementById('tf-chapter');
+      lvSel.innerHTML='<option value="all">Alle</option>'+seviyeler.map(s=>`<option value="${s}">${s}</option>`).join('');
+      chSel.innerHTML='<option value="all">Alle</option>'+bolumler.map(b=>`<option value="${b}">${b}</option>`).join('');
+      renderTextList(res.texts);
+      window._allTexts=res.texts;
+    }
+  } catch(e) { toast('Fehler: '+e.message,false); }
+  hideLoading();
+};
+
+window.updateTextFilter = function() {
+  const lv=document.getElementById('tf-level').value;
+  const ch=document.getElementById('tf-chapter').value;
+  const texts=(window._allTexts||[]).filter(t=>
+    (lv==='all'||t.Seviye===lv)&&(ch==='all'||t.Bolum===ch)
+  );
+  renderTextList(texts);
+};
+
+function renderTextList(texts){
+  const el=document.getElementById('tf-list');
+  const empty=document.getElementById('tf-empty');
+  if(!texts.length){el.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  el.innerHTML=texts.map(t=>`
+    <div class="ncard" onclick="startTextTest(${t.Id})" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+      <div>
+        <div style="font-weight:600">${t.Baslik}</div>
+        <div style="font-size:12px;color:var(--txt2)">${t.Seviye||''} ${t.Bolum?'· '+t.Bolum:''}</div>
+      </div>
+      <i class="ti ti-microphone" style="color:var(--ac);font-size:20px"></i>
+    </div>
+  `).join('');
+}
+
+window.startTextTest = async function(id) {
+  showLoading('Text wird geladen...',30);
+  try {
+    const res = await azureCall({ action: 'getText', id });
+    if (res.success) {
+      ttCurrentText = res.text;
+      document.getElementById('tt-title').textContent = res.text.Baslik;
+      document.getElementById('tt-content').textContent = res.text.Icerik;
+      document.getElementById('tt-result').classList.add('hidden');
+      document.getElementById('tt-next-bar').style.display='none';
+      document.getElementById('tt-playback').classList.add('hidden');
+      document.getElementById('tt-wave').classList.add('hidden');
+      document.getElementById('tt-status').textContent='Taste drücken und vorlesen';
+      document.getElementById('tt-mic-btn').style.background='var(--ac)';
+      // Speech token al (yoksa)
+      if(!spToken){
+        const tokenRes=await fetch(window._AZURE_API+'/speech-token');
+        const data=await tokenRes.json();
+        if(data.token){spToken=data.token;spRegion=data.region||'swedencentral';}
+      }
+      go('s-texttest');
+    }
+  } catch(e) { toast('Fehler: '+e.message,false); }
+  hideLoading();
+};
+
+window.ttSpeak = function(rate) {
+  if(!ttCurrentText)return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(ttCurrentText.Icerik);
+  utt.lang='de-DE';utt.rate=rate;
+  window.speechSynthesis.speak(utt);
+};
+
+window.toggleTextRecording = async function() {
+  if(ttRecording) stopTextRecording();
+  else startTextRecording();
+};
+
+async function startTextRecording(){
+  ttRecording=true;ttAudioChunks=[];
+  document.getElementById('tt-mic-btn').style.background='#E0457B';
+  document.getElementById('tt-status').textContent='Aufnahme läuft... (nochmal tippen zum Stoppen)';
+  document.getElementById('tt-wave').classList.remove('hidden');
+  document.getElementById('tt-result').classList.add('hidden');
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    ttMediaRecorder=new MediaRecorder(stream,{mimeType:'audio/webm'});
+    ttMediaRecorder.ondataavailable=e=>ttAudioChunks.push(e.data);
+    ttMediaRecorder.onstop=async()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      await analyzeTextPronunciation();
+    };
+    ttMediaRecorder.start();
+  }catch(e){
+    ttRecording=false;
+    document.getElementById('tt-mic-btn').style.background='var(--ac)';
+    document.getElementById('tt-status').textContent='Mikrofon konnte nicht geöffnet werden: '+e.message;
+  }
+}
+
+function stopTextRecording(){
+  ttRecording=false;
+  document.getElementById('tt-mic-btn').style.background='var(--ac)';
+  document.getElementById('tt-status').textContent='Wird analysiert...';
+  document.getElementById('tt-wave').classList.add('hidden');
+  if(ttMediaRecorder&&ttMediaRecorder.state!=='inactive')ttMediaRecorder.stop();
+}
+
+async function analyzeTextPronunciation(){
+  if(!ttCurrentText||!spToken){
+    document.getElementById('tt-status').textContent='Fehler: Kein Token';
+    return;
+  }
+  try{
+    const audioBlob=new Blob(ttAudioChunks,{type:'audio/webm'});
+    const arrayBuffer=await audioBlob.arrayBuffer();
+    const audioCtx=new AudioContext();
+    const decoded=await audioCtx.decodeAudioData(arrayBuffer);
+    const wavBuffer=encodeWAV(decoded);
+    const wavBlob=new Blob([wavBuffer],{type:'audio/wav'});
+
+    const pronunciationConfig=JSON.stringify({
+      ReferenceText:ttCurrentText.Icerik,
+      GradingSystem:'HundredMark',
+      Granularity:'Word',
+      EnableMiscue:true
+    });
+    const b64Config=btoa(unescape(encodeURIComponent(pronunciationConfig)));
+    const url=`https://${spRegion}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=de-DE&format=detailed`;
+    const response=await fetch(url,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+spToken,
+        'Content-Type':'audio/wav; codecs=audio/pcm; samplerate=16000',
+        'Pronunciation-Assessment':b64Config,
+        'Accept':'application/json'
+      },
+      body:wavBlob
+    });
+    const result=await response.json();
+    showTextResult(result);
+  }catch(e){
+    document.getElementById('tt-status').textContent='Analysefehler: '+e.message;
+    document.getElementById('tt-next-bar').style.display='flex';
+  }
+}
+
+function showTextResult(result){
+  document.getElementById('tt-result').classList.remove('hidden');
+  document.getElementById('tt-next-bar').style.display='flex';
+  document.getElementById('tt-playback').classList.remove('hidden');
+
+  if(result.RecognitionStatus!=='Success'||!result.NBest||!result.NBest[0]){
+    document.getElementById('tt-score-pct').textContent='–';
+    document.getElementById('tt-status2').textContent='Nicht erkannt — bitte nochmal versuchen';
+    return;
+  }
+
+  const best=result.NBest[0];
+  const words=best.Words||[];
+  const accuracy=Math.round(best.AccuracyScore||0);
+  const overall=accuracy;
+
+  document.getElementById('tt-score-pct').textContent=overall+'%';
+  const bar=document.getElementById('tt-score-bar');
+  bar.style.width=overall+'%';
+  bar.style.background=overall>=80?'#28a745':overall>=60?'#ffc107':'#dc3545';
+
+  document.getElementById('tt-detail').innerHTML=
+    `<div class="sp-detail-chip">Genauigkeit <span>${accuracy}%</span></div>`;
+
+  // Kelime bazında renkli gösterim
+  let html='';
+  words.forEach(word=>{
+    const score=word.AccuracyScore||0;
+    const bg=score>=80?'#d4edda':score>=50?'#fff3cd':'#f8d7da';
+    const color=score>=80?'#155724':score>=50?'#856404':'#721c24';
+    html+=`<span style="display:inline-block;padding:3px 7px;margin:2px;border-radius:6px;background:${bg};color:${color};font-weight:600;font-size:15px" title="${Math.round(score)}%">${word.Word}</span> `;
+  });
+  html+='<div style="font-size:11px;color:var(--txt3);margin-top:8px;display:flex;gap:8px">'+
+    '<span style="color:#155724">■ ≥80%</span>'+
+    '<span style="color:#856404">■ 50–79%</span>'+
+    '<span style="color:#721c24">■ &lt;50%</span></div>';
+  document.getElementById('tt-phonemes').innerHTML=html;
+
+  document.getElementById('tt-status2').textContent=
+    overall>=80?'Sehr gut! 🎉':overall>=60?'Gut gemacht! 👍':'Weiter üben! 💪';
+}
+
+window.playTextRecording = function(){
+  if(!ttAudioChunks.length)return;
+  const blob=new Blob(ttAudioChunks,{type:'audio/webm'});
+  const url=URL.createObjectURL(blob);
+  const audio=document.getElementById('tt-audio');
+  audio.src=url;audio.play();
+};
+
+window.retryTextTest = function(){
+  document.getElementById('tt-result').classList.add('hidden');
+  document.getElementById('tt-next-bar').style.display='none';
+  document.getElementById('tt-playback').classList.add('hidden');
+  document.getElementById('tt-status').textContent='Taste drücken und vorlesen';
+};
+
 window.startSpeech=startSpeech;
 window.updateSpChapters=updateSpChapters;
 window.beginSpeech=beginSpeech;
@@ -1346,6 +1561,10 @@ textarea{resize:vertical;min-height:54px}
     <button class="ncard" onclick="startSpeech('verb')"><i class="ti ti-microphone" style="color:#854F0B"></i><div class="nt">Verben</div></button>
     <button class="ncard" onclick="startSpeech('adj')"><i class="ti ti-microphone" style="color:#3B6D11"></i><div class="nt">Adjektiv</div></button>
   </div>
+  <div style="font-size:15px;font-weight:500;color:var(--txt2)">Lesetest 📖</div>
+  <div class="grid3">
+    <button class="ncard" onclick="openTextSetup()" style="grid-column:1/-1"><i class="ti ti-book" style="color:#534AB7"></i><div class="nt">Texte vorlesen</div></button>
+  </div>
   <button class="btn" onclick="loadWords()" style="font-size:15px"><i class="ti ti-refresh"></i> Aktualisieren</button>
 </div>
 
@@ -1681,6 +1900,74 @@ textarea{resize:vertical;min-height:54px}
     <div style="font-size:13px;color:var(--txt2)">Die türkische Bedeutung wird gegeben, schreibe es auf Deutsch.</div>
   </div>
   <button class="btn pri" onclick="beginWrite()"><i class="ti ti-player-play"></i> Test starten</button>
+</div>
+
+<!-- METİN OKUMA TESTİ SETUP -->
+<div id="s-textsetup" class="scr">
+  <div class="topbar"><button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button><h1>Lesetest</h1></div>
+  <div class="step-box">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px"><i class="ti ti-filter" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Filter</div>
+    <div class="grid2">
+      <div><span class="lbl">Stufe</span><select id="tf-level" onchange="updateTextFilter()"><option value="all">Alle</option></select></div>
+      <div><span class="lbl">Kapitel</span><select id="tf-chapter" onchange="updateTextFilter()"><option value="all">Alle</option></select></div>
+    </div>
+    <div id="tf-list" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"></div>
+    <div id="tf-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:1rem;font-size:14px">Keine Texte gefunden.</div>
+  </div>
+</div>
+
+<!-- METİN OKUMA TESTİ -->
+<div id="s-texttest" class="scr">
+  <div class="topbar"><button class="btn sm" onclick="go('s-textsetup')"><i class="ti ti-arrow-left"></i></button><h1 id="tt-title">Lesetest</h1></div>
+
+  <!-- Metin -->
+  <div style="background:var(--bg2);border-radius:var(--rad);padding:16px;margin-bottom:12px">
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:6px">Lies den folgenden Text vor:</div>
+    <div style="font-size:17px;line-height:1.8;color:var(--txt)" id="tt-content"></div>
+    <!-- Dinleme butonları -->
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn sm" onclick="ttSpeak(1)" title="Vorlesen"><i class="ti ti-volume"></i></button>
+      <button class="btn sm" onclick="ttSpeak(0.4)" title="Langsam">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="5" ry="4"/><circle cx="12" cy="7" r="2"/><line x1="7" y1="10" x2="4" y2="13"/><line x1="17" y1="10" x2="20" y2="13"/><line x1="8" y1="15" x2="6" y2="18"/><line x1="16" y1="15" x2="18" y2="18"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mikrofon -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 0">
+    <button id="tt-mic-btn" onclick="toggleTextRecording()" style="width:80px;height:80px;border-radius:50%;border:none;background:var(--ac);color:#fff;font-size:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(83,74,183,0.4);transition:all .2s">
+      <i class="ti ti-microphone"></i>
+    </button>
+    <div id="tt-status" style="font-size:13px;color:var(--txt2)">Taste drücken und vorlesen</div>
+    <div id="tt-wave" class="hidden" style="display:flex;gap:4px;align-items:center;height:40px">
+      <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      <div class="wave-bar"></div><div class="wave-bar"></div>
+    </div>
+  </div>
+
+  <!-- Sonuç -->
+  <div id="tt-result" class="hidden" style="background:var(--bg2);border-radius:var(--rad);padding:16px;text-align:center">
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--txt2);margin-bottom:4px">
+        <span>Aussprache</span><span id="tt-score-pct">0%</span>
+      </div>
+      <div style="height:12px;background:var(--bg);border-radius:99px;overflow:hidden">
+        <div id="tt-score-bar" style="height:100%;border-radius:99px;background:var(--ac);width:0%;transition:width .6s ease"></div>
+      </div>
+    </div>
+    <div id="tt-detail" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div id="tt-phonemes" style="font-size:15px;line-height:2;margin-bottom:8px;text-align:left"></div>
+    <div id="tt-playback" class="hidden" style="margin-top:8px">
+      <button class="btn sm" onclick="playTextRecording()"><i class="ti ti-player-play"></i> Meine Aufnahme</button>
+      <audio id="tt-audio" style="display:none"></audio>
+    </div>
+    <div id="tt-status2" style="font-size:15px;font-weight:600;margin-top:8px"></div>
+  </div>
+
+  <div class="brow" id="tt-next-bar" style="display:none">
+    <button class="btn" onclick="retryTextTest()"><i class="ti ti-refresh"></i> Nochmal</button>
+    <button class="btn pri" onclick="go('s-textsetup')">Zurück <i class="ti ti-arrow-right"></i></button>
+  </div>
 </div>
 
 <!-- KONUŞMA TESTİ SETUP -->
@@ -2465,10 +2752,11 @@ window.closeListPicker=function(){
 
 function updateFavBtn(btnId,wordId){
   const btn=document.getElementById(btnId);
-  if(!btn)return;
-  const isFav=window.getWordListName&&window.getWordListName(wordId)!==null;
+  if(!btn||!wordId)return;
+  const fn=window.getWordListName;
+  const isFav=fn?fn(wordId)!==null:false;
   btn.innerHTML='<i class="ti '+(isFav?'ti-heart-filled':'ti-heart')+'"></i>';
-  btn.style.color=isFav?'#E0457B':'';
+  btn.style.color=isFav?'#E0457B':'var(--txt3)';
 }
 window.updateFavBtn=updateFavBtn;
 
