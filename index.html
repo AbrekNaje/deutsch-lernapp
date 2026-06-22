@@ -657,6 +657,26 @@ let spRecording=false, spToken=null, spRegion='swedencentral';
 let spType='word'; // 'word' veya 'sentence'
 let mediaRecorder=null, audioChunks=[];
 
+function spSpeak(rate){
+  const w=spDeck[spIdx];
+  const text=w._spSentence||w.word;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang='de-DE';utt.rate=rate;
+  window.speechSynthesis.speak(utt);
+}
+window.spSpeak=spSpeak;
+
+function playRecording(){
+  if(!audioChunks.length)return;
+  const blob=new Blob(audioChunks,{type:'audio/webm'});
+  const url=URL.createObjectURL(blob);
+  const audio=document.getElementById('sp-audio');
+  audio.src=url;
+  audio.play();
+}
+window.playRecording=playRecording;
+
 function startSpeech(grp){
   spGrp=grp;
   document.getElementById('sp-setup-title').textContent=
@@ -727,6 +747,7 @@ async function showSpeech(){
   document.getElementById('sp-result').classList.add('hidden');
   document.getElementById('sp-next-bar').style.display='none';
   document.getElementById('sp-fav-bar').classList.add('hidden');
+  document.getElementById('sp-playback').classList.add('hidden');
   document.getElementById('sp-wave').classList.add('hidden');
   document.getElementById('sp-status').textContent='Taste drücken und sprechen';
   document.getElementById('sp-mic-btn').style.background='var(--ac)';
@@ -846,6 +867,7 @@ function showSpeechResult(result, refText){
   document.getElementById('sp-result').classList.remove('hidden');
   document.getElementById('sp-next-bar').style.display='flex';
   document.getElementById('sp-fav-bar').classList.remove('hidden');
+  document.getElementById('sp-playback').classList.remove('hidden');
 
   const recognized=result.DisplayText||'(nicht erkannt)';
   document.getElementById('sp-recognized').textContent=recognized;
@@ -1690,7 +1712,14 @@ textarea{resize:vertical;min-height:54px}
   <div style="text-align:center;padding:16px 0 8px">
     <div style="font-size:13px;color:var(--txt2);margin-bottom:6px" id="sp-label">Sprich das folgende Wort aus:</div>
     <div style="font-size:32px;font-weight:700;color:var(--txt);margin-bottom:4px" id="sp-word"></div>
-    <div style="font-size:14px;color:var(--txt2)" id="sp-tr"></div>
+    <div style="font-size:14px;color:var(--txt2);margin-bottom:10px" id="sp-tr"></div>
+    <!-- Dinleme butonları -->
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button class="btn sm" onclick="spSpeak(1)" title="Normal hızda dinle"><i class="ti ti-volume"></i></button>
+      <button class="btn sm" onclick="spSpeak(0.4)" title="Yavaş dinle" style="font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="5" ry="4"/><circle cx="12" cy="7" r="2"/><line x1="7" y1="10" x2="4" y2="13"/><line x1="17" y1="10" x2="20" y2="13"/><line x1="8" y1="15" x2="6" y2="18"/><line x1="16" y1="15" x2="18" y2="18"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Mikrofon butonu -->
@@ -1726,7 +1755,15 @@ textarea{resize:vertical;min-height:54px}
     <div id="sp-detail" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px"></div>
 
     <!-- Fonem analizi -->
-    <div id="sp-phonemes" style="font-size:14px;letter-spacing:2px;margin-bottom:8px"></div>
+    <div id="sp-phonemes" style="font-size:14px;letter-spacing:2px;margin-bottom:12px"></div>
+
+    <!-- Kendi sesini dinle -->
+    <div id="sp-playback" class="hidden" style="margin-top:4px">
+      <button class="btn sm" onclick="playRecording()" style="font-size:13px">
+        <i class="ti ti-player-play"></i> Meine Aufnahme anhören
+      </button>
+      <audio id="sp-audio" style="display:none"></audio>
+    </div>
   </div>
 
   <div id="sp-fav-bar" class="hidden" style="display:flex;justify-content:center;margin-bottom:8px">
