@@ -951,6 +951,13 @@ function nextSpeech(){
   }
 }
 
+window.startSpeech=startSpeech;
+window.updateSpChapters=updateSpChapters;
+window.beginSpeech=beginSpeech;
+window.toggleRecording=toggleRecording;
+window.retrySpeech=retrySpeech;
+window.nextSpeech=nextSpeech;
+
 window.downloadCSVTemplate = function(grp) {
   let content='', filename='';
   if(grp==='noun'){
