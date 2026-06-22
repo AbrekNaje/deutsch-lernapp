@@ -835,6 +835,7 @@ async function analyzePronunciation(){
     });
 
     const result=await response.json();
+    console.log('Speech API result:', JSON.stringify(result));
     showSpeechResult(result,refText);
   }catch(e){
     document.getElementById('sp-status').textContent='Analysefehler: '+e.message;
