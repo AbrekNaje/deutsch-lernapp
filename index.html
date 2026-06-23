@@ -132,6 +132,8 @@ async function loadUserProfile(user) {
     userProfile = { email: user.email, anaAil: '', kullaniciTipi: 1, programAdi: 'Klett' };
   }
   window._userProfile = userProfile;
+  // Login logla
+  azureCall({ action: 'logSession', userId: user.uid }).catch(()=>{});
 }
 
 async function loadWords() {
@@ -454,6 +456,10 @@ window.aiFill = async function() {
     if(parsed.cumle3_de){document.getElementById('ex-de-3').value=parsed.cumle3_de;document.getElementById('ex-tr-3').value=parsed.cumle3_tr||'';}
     // AI'nin önerdiği seviyeyi sakla (saveWord'da kullanılacak)
     window._aiSuggestedLevel = parsed.seviye || '';
+    // AI kullanım logla
+    if(data.usage&&window._currentUser){
+      window._azureCall({action:'logAiUsage',userId:window._currentUser.uid,action:'aiComplete',inputTokens:data.usage.inputTokens||0,outputTokens:data.usage.outputTokens||0}).catch(()=>{});
+    }
     status.textContent='✓ Felder ausgefüllt — bitte prüfen und speichern';status.style.color='var(--success)';
   }catch(e){status.textContent='Fehler: '+e.message;status.style.color='var(--danger)';}
   btn.disabled=false;btn.innerHTML='<i class="ti ti-sparkles"></i> Mit KI ausfüllen';
@@ -989,6 +995,152 @@ function nextSpeech(){
 // ============================================================
 let ttAudioChunks=[], ttMediaRecorder=null, ttRecording=false, ttCurrentText=null;
 
+// ============================================================
+// RAPORLAR
+// ============================================================
+window.openUserReport = async function() {
+  go('s-report');
+  const el = document.getElementById('report-content');
+  el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--txt2)">Wird geladen...</div>';
+  try {
+    const user = window._currentUser;
+    const anaAil = (window._userProfile && window._userProfile.anaAil) || 'tr';
+    const res = await azureCall({ action: 'getUserReport', userId: user.uid, anaAil });
+    if (!res.success) throw new Error(res.error);
+    el.innerHTML = renderUserReport(res);
+  } catch(e) { el.innerHTML = '<div style="color:var(--danger);padding:1rem">Fehler: ' + e.message + '</div>'; }
+};
+
+function renderUserReport(r) {
+  const s = r.sessions || {};
+  const tests = r.tests || [];
+  const totalTests = tests.reduce((a, t) => a + t.testCount, 0);
+  const totalWords = tests.reduce((a, t) => a + t.totalWords, 0);
+  const totalCorrect = tests.reduce((a, t) => a + t.totalCorrect, 0);
+  const avgScore = totalWords > 0 ? Math.round(totalCorrect / totalWords * 100) : 0;
+  const TEST_LABELS = { flashcard: 'Lernkarten', multiple: 'Multiple Choice', write: 'Schreibtest', speech: 'Aussprache', text: 'Lesetest' };
+  const GROUP_LABELS = { noun: 'Nomen', verb: 'Verben', adj: 'Adjektiv', '': '' };
+
+  let html = `
+    <div class="card">
+      <div class="section-title"><i class="ti ti-user" style="margin-right:6px"></i>Übersicht</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div class="stat-box"><div class="stat-val">${s.cnt || 0}</div><div class="stat-lbl">Anmeldungen</div></div>
+        <div class="stat-box"><div class="stat-val">${totalTests}</div><div class="stat-lbl">Tests</div></div>
+        <div class="stat-box"><div class="stat-val">${totalWords}</div><div class="stat-lbl">Fragen gesamt</div></div>
+        <div class="stat-box"><div class="stat-val">${avgScore}%</div><div class="stat-lbl">Ø Erfolgsrate</div></div>
+      </div>
+    </div>`;
+
+  // Test bazlı istatistikler
+  if (tests.length) {
+    html += `<div class="card"><div class="section-title"><i class="ti ti-chart-bar" style="margin-right:6px"></i>Tests nach Typ</div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:8px">
+        <tr style="color:var(--txt2);font-size:11px"><th style="text-align:left;padding:4px">Test</th><th>Anzahl</th><th>Ø Score</th></tr>`;
+    tests.forEach(t => {
+      html += `<tr style="border-top:.5px solid var(--brd)">
+        <td style="padding:6px 4px">${TEST_LABELS[t.TestType] || t.TestType} ${GROUP_LABELS[t.WordGroup] || ''}</td>
+        <td style="text-align:center">${t.testCount}</td>
+        <td style="text-align:center;font-weight:600;color:${t.avgScore >= 70 ? '#28a745' : '#dc3545'}">${Math.round(t.avgScore)}%</td>
+      </tr>`;
+    });
+    html += '</table></div>';
+  }
+
+  // En iyi kelimeler
+  const best = [...(r.best.nomen || []), ...(r.best.verben || []), ...(r.best.adjektiv || [])].sort((a, b) => b.rate - a.rate).slice(0, 5);
+  if (best.length) {
+    html += `<div class="card"><div class="section-title" style="color:#28a745"><i class="ti ti-trophy" style="margin-right:6px"></i>Beste Wörter</div>`;
+    best.forEach(w => {
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--brd)">
+        <div><div style="font-weight:500">${w.word}</div><div style="font-size:12px;color:var(--txt2)">${w.tr || ''}</div></div>
+        <span style="background:#d4edda;color:#155724;padding:3px 8px;border-radius:99px;font-size:13px;font-weight:600">${w.rate}%</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // En kötü kelimeler
+  const worst = [...(r.worst.nomen || []), ...(r.worst.verben || []), ...(r.worst.adjektiv || [])].sort((a, b) => a.rate - b.rate).slice(0, 5);
+  if (worst.length) {
+    html += `<div class="card"><div class="section-title" style="color:#dc3545"><i class="ti ti-alert-triangle" style="margin-right:6px"></i>Schwache Wörter</div>`;
+    worst.forEach(w => {
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--brd)">
+        <div><div style="font-weight:500">${w.word}</div><div style="font-size:12px;color:var(--txt2)">${w.tr || ''}</div></div>
+        <span style="background:#f8d7da;color:#721c24;padding:3px 8px;border-radius:99px;font-size:13px;font-weight:600">${w.rate}%</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  return html;
+}
+
+window.openAdminReport = async function() {
+  go('s-admin');
+  const el = document.getElementById('admin-content');
+  el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--txt2)">Wird geladen...</div>';
+  try {
+    const user = window._currentUser;
+    const res = await azureCall({ action: 'getAdminReport', userId: user.uid });
+    if (!res.success) throw new Error(res.error);
+    el.innerHTML = renderAdminReport(res);
+  } catch(e) { el.innerHTML = '<div style="color:var(--danger);padding:1rem">Fehler: ' + e.message + '</div>'; }
+};
+
+function renderAdminReport(r) {
+  const testMap = {};
+  (r.testStats || []).forEach(t => testMap[t.UserId] = t);
+  const aiMap = {};
+  (r.aiStats || []).forEach(a => aiMap[a.UserId] = a);
+
+  let html = `<div class="card">
+    <div class="section-title"><i class="ti ti-robot" style="margin-right:6px"></i>KI-Kosten gesamt</div>
+    <div style="font-size:28px;font-weight:700;color:var(--ac);margin-top:8px">$${parseFloat(r.totalAiCost || 0).toFixed(4)}</div>
+  </div>`;
+
+  // Kullanıcı tablosu
+  html += `<div class="card"><div class="section-title"><i class="ti ti-users" style="margin-right:6px"></i>Benutzer</div>
+    <div style="overflow-x:auto;margin-top:8px">
+    <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:500px">
+      <tr style="color:var(--txt2);font-size:11px">
+        <th style="text-align:left;padding:4px">E-Mail</th>
+        <th>Login</th>
+        <th>Tests</th>
+        <th>Ø Score</th>
+        <th>KI-Anfragen</th>
+        <th>KI-Kosten</th>
+      </tr>`;
+
+  (r.users || []).forEach(u => {
+    const t = testMap[u.UserId] || {};
+    const a = aiMap[u.UserId] || {};
+    html += `<tr style="border-top:.5px solid var(--brd)">
+      <td style="padding:6px 4px">${u.Email || u.UserId.slice(0, 8)}</td>
+      <td style="text-align:center">${u.loginCount || 0}</td>
+      <td style="text-align:center">${t.testCount || 0}</td>
+      <td style="text-align:center;font-weight:600">${t.avgScore ? Math.round(t.avgScore) + '%' : '–'}</td>
+      <td style="text-align:center">${a.queryCount || 0}</td>
+      <td style="text-align:center;color:var(--ac)">$${parseFloat(a.totalCost || 0).toFixed(4)}</td>
+    </tr>`;
+  });
+  html += '</table></div></div>';
+
+  // Son 30 gün login grafiği (basit)
+  if (r.loginStats && r.loginStats.length) {
+    html += `<div class="card"><div class="section-title"><i class="ti ti-calendar" style="margin-right:6px"></i>Anmeldungen (letzte 30 Tage)</div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:12px">`;
+    const max = Math.max(...r.loginStats.map(d => d.cnt));
+    r.loginStats.forEach(d => {
+      const h = max > 0 ? Math.round((d.cnt / max) * 56) : 4;
+      html += `<div title="${d.day}: ${d.cnt}" style="flex:1;background:var(--ac);border-radius:2px 2px 0 0;height:${h}px;min-width:4px;opacity:0.8"></div>`;
+    });
+    html += '</div></div>';
+  }
+
+  return html;
+}
+
 window.openTextSetup = async function() {
   go('s-textsetup');
   showLoading('Texte werden geladen...',30);
@@ -1340,6 +1492,9 @@ textarea{resize:vertical;min-height:54px}
 .loading-overlay.show{display:flex}
 .loading-box{background:var(--bg);border-radius:var(--radlg);padding:1.5rem 2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
 @keyframes hourglass{0%{transform:rotate(0deg)}40%{transform:rotate(0deg)}50%{transform:rotate(180deg)}90%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+.stat-box{background:var(--bg2);border-radius:var(--rad);padding:12px;text-align:center}
+.stat-val{font-size:24px;font-weight:700;color:var(--ac)}
+.stat-lbl{font-size:11px;color:var(--txt2);margin-top:2px}
 .wave-bar{width:4px;border-radius:99px;background:var(--ac);animation:wave 0.8s ease-in-out infinite}
 .wave-bar:nth-child(1){animation-delay:0s;height:16px}
 .wave-bar:nth-child(2){animation-delay:.1s;height:28px}
@@ -1583,6 +1738,8 @@ textarea{resize:vertical;min-height:54px}
   <button class="btn" onclick="go('s-csv')"><i class="ti ti-upload"></i> CSV importieren</button>
   <button class="btn" onclick="openMasterImport()"><i class="ti ti-database-import"></i> Aus Masterdatenbank importieren</button>
   <button class="btn" onclick="openWordLists()"><i class="ti ti-list"></i> Wortlisten verwalten</button>
+  <button class="btn" onclick="openUserReport()"><i class="ti ti-chart-bar"></i> Mein Bericht</button>
+  <button class="btn" id="admin-btn" style="display:none" onclick="openAdminReport()"><i class="ti ti-shield"></i> Admin-Bericht</button>
   <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV-Anleitung</button>
   <button class="btn" style="color:var(--danger);border-color:var(--danger)" onclick="doLogout()"><i class="ti ti-logout"></i> Abmelden</button>
 </div>
@@ -1900,6 +2057,24 @@ textarea{resize:vertical;min-height:54px}
     <div style="font-size:13px;color:var(--txt2)">Die türkische Bedeutung wird gegeben, schreibe es auf Deutsch.</div>
   </div>
   <button class="btn pri" onclick="beginWrite()"><i class="ti ti-player-play"></i> Test starten</button>
+</div>
+
+<!-- KULLANICI RAPORU -->
+<div id="s-report" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-settings')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Mein Bericht</h1>
+  </div>
+  <div id="report-content" style="display:flex;flex-direction:column;gap:12px"></div>
+</div>
+
+<!-- ADMIN RAPORU -->
+<div id="s-admin" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-settings')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Admin-Bericht</h1>
+  </div>
+  <div id="admin-content" style="display:flex;flex-direction:column;gap:12px"></div>
 </div>
 
 <!-- METİN OKUMA TESTİ SETUP -->
@@ -2275,6 +2450,9 @@ function updateSettingsProfile(){
   const LANGS=[{code:'tr',name:'Türkçe'},{code:'en',name:'English'},{code:'ar',name:'Arapça / عربي'},{code:'ko',name:'한국어'},{code:'es',name:'Español'},{code:'bn',name:'বাংলা'},{code:'ru',name:'Русский'},{code:'uk',name:'Українська'},{code:'ps',name:'پښتو'},{code:'fa',name:'فارسی'},{code:'bg',name:'Български'},{code:'sr',name:'Српски'},{code:'hi',name:'हिंदी'}];
   const lang=LANGS.find(l=>l.code===profile.anaAil);
   document.getElementById('profile-lang').textContent='Muttersprache: '+(lang?lang.name:'-');
+  // Admin butonu göster/gizle
+  const adminBtn=document.getElementById('admin-btn');
+  if(adminBtn)adminBtn.style.display=(profile.kullaniciTipi>=4)?'block':'none';
   const sel=document.getElementById('lang-change');
   sel.innerHTML='<option value="">-- Bitte wählen --</option>'+LANGS.map(l=>`<option value="${l.code}"${l.code===profile.anaAil?' selected':''}>${l.name}</option>`).join('');
 }
@@ -2640,7 +2818,7 @@ function answerMulti(btn,correct,w){document.querySelectorAll('#mt-opts .opt').f
     });
   } else if(sentEl){sentEl.classList.add('hidden');}
 }
-function nextMulti(){mIdx++;const sentEl=document.getElementById('mt-sentences');if(sentEl){sentEl.classList.add('hidden');sentEl.innerHTML='';}if(mIdx>=mDeck.length)showResult(mCorr,mDeck.length,mWrong,()=>beginMulti());else showMulti();}
+function nextMulti(){mIdx++;const sentEl=document.getElementById('mt-sentences');if(sentEl){sentEl.classList.add('hidden');sentEl.innerHTML='';}if(mIdx>=mDeck.length)showResult(mCorr,mDeck.length,mWrong,()=>beginMulti(),'multiple',mGrp);else showMulti();}
 
 // YAZILI
 function startWrite(grp){wGrp=grp;wTense='praesens';wPron='ich';wProns=['ich'];document.getElementById('ws-title').textContent=grp==='noun'?'Nomen – Schreibtest':grp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';['ws-verb','ws-noun','ws-adj'].forEach(id=>document.getElementById(id).classList.add('hidden'));if(grp==='verb'){document.getElementById('ws-verb').classList.remove('hidden');buildTenses('ts-write',true);buildProns('ps-write',true);}else if(grp==='noun'){document.getElementById('ws-noun').classList.remove('hidden');}else{document.getElementById('ws-adj').classList.remove('hidden');}fillLevels('wf-level',grpPool(grp));document.getElementById('wf-chapter').innerHTML='<option value="">Alle</option>';updateWChapters();if(window.fillListSelects)window.fillListSelects();go('s-wsetup');}
@@ -2674,7 +2852,12 @@ function nextWrite(){advWrite();}
 function advWrite(){if(wGrp==='noun'){if(wStep<1){wStep++;showWrite();}else{wStep=0;wIdx++;if(wIdx>=wDeck.length)finWrite();else showWrite();}}else{wIdx++;if(wIdx>=wDeck.length)finWrite();else showWrite();}}
 function finWrite(){const total=wGrp==='noun'?wDeck.length*2:wDeck.length;showResult(wCorr,total,[...new Map(wWrong.map(w=>[w._id,w])).values()],()=>beginWrite());}
 
-function showResult(corr,total,wrongArr,retryFn){go('s-result');document.getElementById('res-pct').textContent=Math.round(corr/total*100)+'%';document.getElementById('res-sub').textContent=corr+' / '+total+' richtig';document.getElementById('res-retry').onclick=retryFn;const el=document.getElementById('res-wrong');if(!wrongArr.length){el.innerHTML='<div style="font-size:13px;color:var(--success)">Alle Fragen richtig beantwortet!</div>';}else{el.innerHTML=wrongArr.map(w=>'<div style="font-size:13px;padding:4px 0;border-bottom:.5px solid var(--brd)">'+w.word+' = '+w.tr+'</div>').join('');}updateHome();}
+function showResult(corr,total,wrongArr,retryFn,testType,wordGroup){go('s-result');document.getElementById('res-pct').textContent=Math.round(corr/total*100)+'%';document.getElementById('res-sub').textContent=corr+' / '+total+' richtig';document.getElementById('res-retry').onclick=retryFn;const el=document.getElementById('res-wrong');if(!wrongArr.length){el.innerHTML='<div style="font-size:13px;color:var(--success)">Alle Fragen richtig beantwortet!</div>';}else{el.innerHTML=wrongArr.map(w=>'<div style="font-size:13px;padding:4px 0;border-bottom:.5px solid var(--brd)">'+w.word+' = '+w.tr+'</div>').join('');}updateHome();
+  // Test logla
+  if(window._currentUser&&testType){
+    window._azureCall({action:'logTest',userId:window._currentUser.uid,testType:testType||'unknown',wordGroup:wordGroup||'',wordCount:total,correctCount:corr}).catch(()=>{});
+  }
+}
 
 // KELİME LİSTESİ
 function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .gtab').forEach(b=>b.classList.remove('active'));el.classList.add('active');fillLevels('lf-lv',grpPool(g));updateLfChapters();renderList();}
