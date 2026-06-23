@@ -1048,7 +1048,9 @@ function renderUserReport(r) {
   }
 
   // En iyi kelimeler
-  const best = [...(r.best.nomen || []), ...(r.best.verben || []), ...(r.best.adjektiv || [])].sort((a, b) => b.rate - a.rate).slice(0, 5);
+  const best = [...(r.best.nomen || []), ...(r.best.verben || []), ...(r.best.adjektiv || [])]
+    .filter(w => (w.Correct + w.Wrong) > 0)
+    .sort((a, b) => b.rate - a.rate).slice(0, 5);
   if (best.length) {
     html += `<div class="card"><div class="section-title" style="color:#28a745"><i class="ti ti-trophy" style="margin-right:6px"></i>Beste Wörter</div>`;
     best.forEach(w => {
@@ -1061,7 +1063,9 @@ function renderUserReport(r) {
   }
 
   // En kötü kelimeler
-  const worst = [...(r.worst.nomen || []), ...(r.worst.verben || []), ...(r.worst.adjektiv || [])].sort((a, b) => a.rate - b.rate).slice(0, 5);
+  const worst = [...(r.worst.nomen || []), ...(r.worst.verben || []), ...(r.worst.adjektiv || [])]
+    .filter(w => (w.Correct + w.Wrong) > 0)
+    .sort((a, b) => a.rate - b.rate).slice(0, 5);
   if (worst.length) {
     html += `<div class="card"><div class="section-title" style="color:#dc3545"><i class="ti ti-alert-triangle" style="margin-right:6px"></i>Schwache Wörter</div>`;
     worst.forEach(w => {
@@ -1742,6 +1746,7 @@ textarea{resize:vertical;min-height:54px}
   <button class="btn" id="admin-btn" style="display:none" onclick="openAdminReport()"><i class="ti ti-shield"></i> Admin-Bericht</button>
   <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV-Anleitung</button>
   <button class="btn" style="color:var(--danger);border-color:var(--danger)" onclick="doLogout()"><i class="ti ti-logout"></i> Abmelden</button>
+  <div style="text-align:center;font-size:11px;color:var(--txt3);margin-top:16px">Beta 26.06.23.11.16</div>
 </div>
 
 <!-- WORTLISTEN -->
