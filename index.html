@@ -1072,9 +1072,12 @@ function renderUserReport(r) {
   if (worst.length) {
     html += `<div class="card"><div class="section-title" style="color:#dc3545"><i class="ti ti-alert-triangle" style="margin-right:6px"></i>Schwache Wörter</div>`;
     worst.forEach(w => {
+      const scoreColor = w.rate >= 0 ? '#155724' : '#721c24';
+      const scoreBg = w.rate >= 0 ? '#d4edda' : '#f8d7da';
       html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--brd)">
-        <div><div style="font-weight:500">${w.word}</div><div style="font-size:12px;color:var(--txt2)">${w.tr || ''}</div></div>
-        <span style="background:#f8d7da;color:#721c24;padding:3px 8px;border-radius:99px;font-size:13px;font-weight:600">${w.rate}%</span>
+        <div><div style="font-weight:500">${w.word}</div><div style="font-size:12px;color:var(--txt2)">${w.tr || ''}</div>
+        <div style="font-size:11px;color:var(--txt3);margin-top:2px">✓ ${w.Correct} &nbsp; ✗ ${w.Wrong}</div></div>
+        <span style="background:${scoreBg};color:${scoreColor};padding:3px 8px;border-radius:99px;font-size:13px;font-weight:600">${w.rate}%</span>
       </div>`;
     });
     html += '</div>';
