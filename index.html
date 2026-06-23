@@ -1054,9 +1054,12 @@ function renderUserReport(r) {
   if (best.length) {
     html += `<div class="card"><div class="section-title" style="color:#28a745"><i class="ti ti-trophy" style="margin-right:6px"></i>Beste Wörter</div>`;
     best.forEach(w => {
-      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--brd)">
-        <div><div style="font-weight:500">${w.word}</div><div style="font-size:12px;color:var(--txt2)">${w.tr || ''}</div></div>
-        <span style="background:#d4edda;color:#155724;padding:3px 8px;border-radius:99px;font-size:13px;font-weight:600">${w.rate}%</span>
+        const scoreColor = w.rate >= 0 ? '#155724' : '#721c24';
+        const scoreBg = w.rate >= 0 ? '#d4edda' : '#f8d7da';
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--brd)">
+        <div><div style="font-weight:500">${w.word}</div><div style="font-size:12px;color:var(--txt2)">${w.tr || ''}</div>
+        <div style="font-size:11px;color:var(--txt3);margin-top:2px">✓ ${w.Correct} &nbsp; ✗ ${w.Wrong}</div></div>
+        <span style="background:${scoreBg};color:${scoreColor};padding:3px 8px;border-radius:99px;font-size:13px;font-weight:600">${w.rate}%</span>
       </div>`;
     });
     html += '</div>';
@@ -1746,6 +1749,7 @@ textarea{resize:vertical;min-height:54px}
   <button class="btn" id="admin-btn" style="display:none" onclick="openAdminReport()"><i class="ti ti-shield"></i> Admin-Bericht</button>
   <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV-Anleitung</button>
   <button class="btn" style="color:var(--danger);border-color:var(--danger)" onclick="doLogout()"><i class="ti ti-logout"></i> Abmelden</button>
+  <div style="text-align:center;font-size:11px;color:var(--txt3);margin-top:16px">Beta 26.06.23.11.16</div>
   <div style="text-align:center;font-size:11px;color:var(--txt3);margin-top:16px">Beta 26.06.23.11.16</div>
 </div>
 
