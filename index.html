@@ -115,6 +115,7 @@ onAuthStateChanged(auth, async (user) => {
     userProfile = null;
     words = [];
     // Karşılama ekranına git
+    if(window.hideLoading) window.hideLoading();
     go('s-welcome');
   }
 });
@@ -726,8 +727,7 @@ async function beginSpeech(){
   }
   if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}
 
-  const spLimit=document.getElementById('spf-count-sel').value;
-  spDeck=spLimit==='all'?pool.sort(()=>Math.random()-.5):pool.sort(()=>Math.random()-.5).slice(0,parseInt(spLimit));
+  spDeck=pool.sort(()=>Math.random()-.5).slice(0,10);
   spIdx=0;spCorr=0;spWrong=[];
 
   // Speech token al
@@ -1549,10 +1549,10 @@ textarea{resize:vertical;min-height:54px}
 <body>
 <div id="app">
 <div id="toast" class="toast"></div>
-<div id="loading" class="loading-overlay">
+<div id="loading" class="loading-overlay show">
   <div class="loading-box">
     <div style="font-size:48px;animation:hourglass 1.5s ease-in-out infinite">⏳</div>
-    <div style="font-size:15px;font-weight:500;color:var(--txt)" id="loading-msg">Laden...</div>
+    <div style="font-size:15px;font-weight:500;color:var(--txt)" id="loading-msg">Verbindung wird hergestellt...</div>
     <div style="width:200px;height:6px;background:var(--bg2);border-radius:99px;overflow:hidden;margin-top:8px">
       <div id="loading-bar" style="height:100%;background:var(--ac);border-radius:99px;width:0%;transition:width 0.4s ease"></div>
     </div>
@@ -1953,14 +1953,6 @@ textarea{resize:vertical;min-height:54px}
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="ff-list" onchange="updateFCount()"><option value="">Alle Wörter</option></select></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="ff-sentences"> Beispielsätze anzeigen</label>
-    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
-      <select id="ff-count-sel">
-        <option value="20" selected>20 Wörter</option>
-        <option value="40">40 Wörter</option>
-        <option value="60">60 Wörter</option>
-        <option value="all">Alle Wörter</option>
-      </select>
-    </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="ff-count"></div>
   </div>
   <button class="btn pri" onclick="beginFlash()"><i class="ti ti-player-play"></i> Starten</button>
@@ -1973,6 +1965,7 @@ textarea{resize:vertical;min-height:54px}
   <div style="background:var(--bg);border:.5px solid var(--brd);border-radius:var(--radlg);padding:1.4rem 1rem;text-align:center;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;position:relative" onclick="flipFlash()">
     <span style="position:absolute;top:10px;right:10px;font-size:11px;background:var(--acl);color:var(--ac);padding:2px 8px;border-radius:99px" id="fl-tag"></span>
     <button class="sbtn" id="fl-fav-btn" onclick="event.stopPropagation();openListPicker(flDeck[flIdx]._id,flDeck[flIdx]._col)" title="Zur Wortliste" style="position:absolute;top:8px;left:8px;font-size:18px"><i class="ti ti-heart"></i></button>
+    <div id="fl-stats" style="position:absolute;bottom:10px;left:10px;display:flex;gap:6px;font-size:11px;font-weight:500"></div>
     <div id="fl-front">
       <div style="font-size:30px;font-weight:500" id="fl-art"></div>
       <div style="font-size:24px;font-weight:500;color:var(--txt)" id="fl-w"></div>
@@ -2009,14 +2002,6 @@ textarea{resize:vertical;min-height:54px}
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="mf-list" onchange="updateMCount()"><option value="">Alle Wörter</option></select></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="mf-sentences"> Beispielsätze anzeigen</label>
-    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
-      <select id="mf-count-sel">
-        <option value="20" selected>20 Wörter</option>
-        <option value="40">40 Wörter</option>
-        <option value="60">60 Wörter</option>
-        <option value="all">Alle Wörter</option>
-      </select>
-    </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="mf-count"></div>
   </div>
   <div id="ms-noun" class="step-box hidden">
@@ -2046,6 +2031,7 @@ textarea{resize:vertical;min-height:54px}
   <div class="progbar"><div class="progfill" id="mt-prog" style="width:0%"></div></div>
   <div class="qbox" style="position:relative">
     <button class="sbtn" id="mt-fav-btn" onclick="openListPicker(mDeck[mIdx]._id,mDeck[mIdx]._col)" title="Zur Wortliste" style="position:absolute;top:8px;left:8px;font-size:18px"><i class="ti ti-heart"></i></button>
+    <div id="mt-stats" style="position:absolute;bottom:10px;left:10px;display:flex;gap:6px;font-size:11px;font-weight:500"></div>
     <div class="qlbl" id="mt-qlbl"></div>
     <div class="qword" id="mt-q"></div>
     <div class="qhint" id="mt-hint"></div>
@@ -2071,14 +2057,6 @@ textarea{resize:vertical;min-height:54px}
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="wf-list" onchange="updateWCount()"><option value="">Alle Wörter</option></select></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="wf-sentences"> Beispielsätze anzeigen</label>
-    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
-      <select id="wf-count-sel">
-        <option value="20" selected>20 Wörter</option>
-        <option value="40">40 Wörter</option>
-        <option value="60">60 Wörter</option>
-        <option value="all">Alle Wörter</option>
-      </select>
-    </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="wf-count"></div>
   </div>
   <div id="ws-verb" class="step-box hidden">
@@ -2198,14 +2176,6 @@ textarea{resize:vertical;min-height:54px}
         <label><input type="radio" name="sp-type" value="sentence"> Beispielsätze</label>
       </div>
     </div>
-    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
-      <select id="spf-count-sel">
-        <option value="20" selected>20 Wörter</option>
-        <option value="40">40 Wörter</option>
-        <option value="60">60 Wörter</option>
-        <option value="all">Alle Wörter</option>
-      </select>
-    </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="spf-count"></div>
   </div>
   <button class="btn pri" onclick="beginSpeech()"><i class="ti ti-microphone"></i> Test starten</button>
@@ -2289,6 +2259,7 @@ textarea{resize:vertical;min-height:54px}
   <div class="progbar"><div class="progfill" id="wt-prog" style="width:0%"></div></div>
   <div class="qbox" style="position:relative">
     <button class="sbtn" id="wt-fav-btn" onclick="openListPicker(wDeck[wIdx]._id,wDeck[wIdx]._col)" title="Zur Wortliste" style="position:absolute;top:8px;left:8px;font-size:18px"><i class="ti ti-heart"></i></button>
+    <div id="wt-stats" style="position:absolute;bottom:10px;left:10px;display:flex;gap:6px;font-size:11px;font-weight:500"></div>
     <div class="qlbl" id="wt-qlbl"></div>
     <div class="qword" id="wt-q"></div>
     <div class="qhint" id="wt-hint"></div>
@@ -2448,6 +2419,18 @@ function setLoadingPct(pct){
 function hideLoading(){
   setLoadingPct(100);
   setTimeout(()=>{document.getElementById('loading').classList.remove('show');setLoadingPct(0);},300);
+}
+window.hideLoading = hideLoading;
+
+function renderWordStats(elId, w) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const c = w.correct || 0, wr = w.wrong || 0, st = w.streak || 0;
+  if (c === 0 && wr === 0) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    `<span style="background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:99px">✓ ${c}</span>` +
+    `<span style="background:#ffebee;color:#c62828;padding:2px 7px;border-radius:99px">✗ ${wr}</span>` +
+    (st >= 2 ? `<span style="background:#fff3e0;color:#e65100;padding:2px 7px;border-radius:99px">🔥 ${st}</span>` : '');
 }
 function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=msg;t.style.background=ok?'#3B6D11':'#A32D2D';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
@@ -2698,8 +2681,8 @@ function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p
 
 // FLASHCARD
 function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen – Lernkarten':grp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Alle</option>';updateFChapters();if(window.fillListSelects)window.fillListSelects();go('s-fsetup');}
-function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);const flLimit=document.getElementById('ff-count-sel').value;flDeck=(flLimit==='all'?scored:scored.slice(0,parseInt(flLimit))).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
-function showFlash(){const w=flDeck[flIdx];flFlipped=false;flWord=w.word;document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · '+w.chapter:'');document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');const art=document.getElementById('fl-art');art.textContent='';art.style.color='';document.getElementById('fl-w').textContent=w.word;document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Plural: '+w.plural:'Tippen zum Umdrehen';document.getElementById('fl-tr').textContent=w.tr;let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;document.getElementById('fl-ex').textContent=ex;if(window.updateFavBtn)window.updateFavBtn('fl-fav-btn',w._id);}
+function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);flDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
+function showFlash(){const w=flDeck[flIdx];flFlipped=false;flWord=w.word;document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · '+w.chapter:'');document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');const art=document.getElementById('fl-art');art.textContent='';art.style.color='';document.getElementById('fl-w').textContent=w.word;document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Plural: '+w.plural:'Tippen zum Umdrehen';document.getElementById('fl-tr').textContent=w.tr;let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;document.getElementById('fl-ex').textContent=ex;if(window.updateFavBtn)window.updateFavBtn('fl-fav-btn',w._id);renderWordStats('fl-stats',w);}
 function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');
   const w=flDeck[flIdx];
   const anaAil=(window._userProfile&&window._userProfile.anaAil)||'tr';
@@ -2819,15 +2802,14 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
     mShowSentences=document.getElementById('mf-sentences').checked;
     const scored=deck.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));
     scored.sort((a,b)=>b.score-a.score);
-    const mLimit=document.getElementById('mf-count-sel').value;
-    mDeck=(mLimit==='all'?scored:scored.slice(0,parseInt(mLimit))).map(s=>s.w).sort(()=>Math.random()-.5);
+    mDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);
     mIdx=0;mCorr=0;mWrong=[];
     document.getElementById('mt-title').textContent=mGrp==='noun'?'Nomen – Multiple-Choice-Test':mGrp==='verb'?'Verben – Multiple-Choice-Test':'Adjektiv – Multiple-Choice-Test';
     go('s-multi');showMulti();
   }
   loadAndStart();
 }
-function showMulti(){const w=mDeck[mIdx];document.getElementById('mt-ctr').textContent=(mIdx+1)+'/'+mDeck.length;document.getElementById('mt-prog').style.width=(mIdx/mDeck.length*100)+'%';document.getElementById('mt-fb').classList.add('hidden');document.getElementById('mt-next').classList.add('hidden');let q='',qlbl='';if(mGrp==='verb'){const tl=TENSES.find(t=>t.id===mTense).lbl;if(mTense==='mastar'){qlbl=mDir==='de-tr'?'Was bedeutet es?':'Wie heißt es auf Deutsch? (Infinitiv)';q=mDir==='de-tr'?w.word:w.tr;mtSpk=w.word;}else{const pl=PRONOUNS.find(p=>p.id===mPron).lbl;qlbl=tl+' — '+pl+' Form?';q=w.word;mtSpk=w.word;}}else if(mGrp==='noun'){if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}else{if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}document.getElementById('mt-q').textContent=q;document.getElementById('mt-qlbl').textContent=qlbl;document.getElementById('mt-hint').textContent='';if(window.updateFavBtn)window.updateFavBtn('mt-fav-btn',w._id);
+function showMulti(){const w=mDeck[mIdx];document.getElementById('mt-ctr').textContent=(mIdx+1)+'/'+mDeck.length;document.getElementById('mt-prog').style.width=(mIdx/mDeck.length*100)+'%';document.getElementById('mt-fb').classList.add('hidden');document.getElementById('mt-next').classList.add('hidden');let q='',qlbl='';if(mGrp==='verb'){const tl=TENSES.find(t=>t.id===mTense).lbl;if(mTense==='mastar'){qlbl=mDir==='de-tr'?'Was bedeutet es?':'Wie heißt es auf Deutsch? (Infinitiv)';q=mDir==='de-tr'?w.word:w.tr;mtSpk=w.word;}else{const pl=PRONOUNS.find(p=>p.id===mPron).lbl;qlbl=tl+' — '+pl+' Form?';q=w.word;mtSpk=w.word;}}else if(mGrp==='noun'){if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}else{if(mDir==='de-tr'){q=w.word;qlbl='Was bedeutet es?';mtSpk=w.word;}else{q=w.tr;qlbl='Wie heißt es auf Deutsch?';mtSpk=w.word;}}document.getElementById('mt-q').textContent=q;document.getElementById('mt-qlbl').textContent=qlbl;document.getElementById('mt-hint').textContent='';if(window.updateFavBtn)window.updateFavBtn('mt-fav-btn',w._id);renderWordStats('mt-stats',w);
   let opts;
   // Präsens için aynı fiilin diğer şahıs çekimlerini şık olarak kullan
   if(mGrp==='verb'&&mTense==='praesens'&&w.praesens){
@@ -2885,11 +2867,11 @@ function beginWrite(){const lv=document.getElementById('wf-level').value;const c
         hideLoading();
       }
     }
-    const wLimit=document.getElementById('wf-count-sel').value;const wSlice=arr=>wLimit==='all'?arr:arr.slice(0,parseInt(wLimit));if(wGrp==='verb'&&wTense==='praesens'){const filtered=pool.filter(w=>w.praesens&&w.praesens[wPron]);if(!filtered.length){alert('Keine Daten für die gewählte Person!');return;}wDeck=wSlice(filtered.sort(()=>Math.random()-.5));}else if(wGrp==='verb'&&wTense==='mastar'){const shuffled=[...pool].sort(()=>Math.random()-.5);wDeck=wSlice(shuffled);}else if(wGrp==='verb'){const filtered=pool.filter(w=>w[wTense]);if(!filtered.length){alert('Keine Daten für die gewählte Zeitform!');return;}wDeck=wSlice(filtered.sort(()=>Math.random()-.5));}else{wDeck=wSlice(pool.sort(()=>Math.random()-.5));}wIdx=0;wStep=0;wCorr=0;wWrong=[];wShowSentences=document.getElementById('wf-sentences').checked;document.getElementById('wt-title').textContent=wGrp==='noun'?'Nomen – Schreibtest':wGrp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';go('s-write');showWrite();
+    if(wGrp==='verb'&&wTense==='praesens'){const filtered=pool.filter(w=>w.praesens&&w.praesens[wPron]);if(!filtered.length){alert('Keine Daten für die gewählte Person!');return;}wDeck=filtered.sort(()=>Math.random()-.5).slice(0,10);}else if(wGrp==='verb'&&wTense==='mastar'){const shuffled=[...pool].sort(()=>Math.random()-.5).slice(0,10);wDeck=shuffled;}else if(wGrp==='verb'){const filtered=pool.filter(w=>w[wTense]);if(!filtered.length){alert('Keine Daten für die gewählte Zeitform!');return;}wDeck=filtered.sort(()=>Math.random()-.5).slice(0,10);}else{wDeck=pool.sort(()=>Math.random()-.5).slice(0,10);}wIdx=0;wStep=0;wCorr=0;wWrong=[];wShowSentences=document.getElementById('wf-sentences').checked;document.getElementById('wt-title').textContent=wGrp==='noun'?'Nomen – Schreibtest':wGrp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';go('s-write');showWrite();
   }
   loadAndStart();
 }
-function showWrite(){const w=wDeck[wIdx];wAnswered=false;const total=wGrp==='noun'?wDeck.length*2:wDeck.length;const curr=wGrp==='noun'?wIdx*2+wStep:wIdx;document.getElementById('wt-ctr').textContent=(curr+1)+'/'+total;document.getElementById('wt-prog').style.width=(curr/total*100)+'%';const inp=document.getElementById('wt-inp');inp.value='';inp.className='winp';inp.disabled=false;document.getElementById('wt-fb').classList.add('hidden');document.getElementById('wt-next').classList.add('hidden');document.getElementById('wt-check').classList.remove('hidden');document.getElementById('wt-warn').classList.remove('show');const exp=getExp(w);resetLBar(exp.length||1);const{q,hint}=getQ(w);document.getElementById('wt-q').textContent=q;document.getElementById('wt-qlbl').textContent='';document.getElementById('wt-hint').textContent=hint;inp.oninput=()=>updateLBar(inp.value,getExp(wDeck[wIdx]));inp.onkeydown=e=>{if(e.key==='Enter'&&!wAnswered)checkWrite();};if(window.updateFavBtn)window.updateFavBtn('wt-fav-btn',w._id);}
+function showWrite(){const w=wDeck[wIdx];wAnswered=false;const total=wGrp==='noun'?wDeck.length*2:wDeck.length;const curr=wGrp==='noun'?wIdx*2+wStep:wIdx;document.getElementById('wt-ctr').textContent=(curr+1)+'/'+total;document.getElementById('wt-prog').style.width=(curr/total*100)+'%';const inp=document.getElementById('wt-inp');inp.value='';inp.className='winp';inp.disabled=false;document.getElementById('wt-fb').classList.add('hidden');document.getElementById('wt-next').classList.add('hidden');document.getElementById('wt-check').classList.remove('hidden');document.getElementById('wt-warn').classList.remove('show');const exp=getExp(w);resetLBar(exp.length||1);const{q,hint}=getQ(w);document.getElementById('wt-q').textContent=q;document.getElementById('wt-qlbl').textContent='';document.getElementById('wt-hint').textContent=hint;inp.oninput=()=>updateLBar(inp.value,getExp(wDeck[wIdx]));inp.onkeydown=e=>{if(e.key==='Enter'&&!wAnswered)checkWrite();};if(window.updateFavBtn)window.updateFavBtn('wt-fav-btn',w._id);renderWordStats('wt-stats',w);}
 function resetLBar(len){const b=document.getElementById('wt-lbar');b.innerHTML='';document.getElementById('wt-lpct').textContent='';for(let i=0;i<Math.max(len,1);i++){const s=document.createElement('div');s.className='lseg';b.appendChild(s);}}
 function updateLBar(typed,exp){const b=document.getElementById('wt-lbar');const len=exp.length;while(b.children.length<len){const s=document.createElement('div');s.className='lseg';b.appendChild(s);}while(b.children.length>len)b.removeChild(b.lastChild);const segs=b.querySelectorAll('.lseg');const tl=typed.toLowerCase(),el=exp.toLowerCase();let cor=0;for(let i=0;i<len;i++){const s=segs[i];if(i>=typed.length)s.className='lseg';else if(tl[i]===el[i]){s.className='lseg ok';cor++;}else s.className='lseg no';}document.getElementById('wt-lpct').textContent=typed.length>0?Math.round(cor/len*100)+'% richtig':'';}
 function checkWrite(){if(wAnswered)return;const w=wDeck[wIdx];const typed=document.getElementById('wt-inp').value.trim();const exp=getExp(w);if(!exp){advWrite();return;}wAnswered=true;updateLBar(typed,exp);const exact=typed===exp,caseOnly=typed.toLowerCase()===exp.toLowerCase()&&!exact,correct=exact||caseOnly;const inp=document.getElementById('wt-inp');inp.disabled=true;document.getElementById('wt-check').classList.add('hidden');document.getElementById('wt-next').classList.remove('hidden');if(caseOnly)document.getElementById('wt-warn').classList.add('show');const fb=document.getElementById('wt-fb');fb.classList.remove('hidden');if(correct){inp.className='winp ok';wCorr++;const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.correct=(o.correct||0)+1;o.streak=(o.streak||0)+1;updateStats(o);}fb.innerHTML='<span class="ok"><i class="ti ti-check"></i> Richtig!</span>';speak(exp);}else{inp.className='winp no';wWrong.push(w);const o=(window._words||[]).find(x=>x._id===w._id);if(o){o.wrong=(o.wrong||0)+1;o.streak=0;updateStats(o);}fb.innerHTML='<span class="no"><i class="ti ti-x"></i> Falsch</span><span style="font-size:13px;color:var(--txt2)">Richtig wäre: <strong style="color:var(--txt)">'+exp+'</strong></span>';speak(exp);}}
