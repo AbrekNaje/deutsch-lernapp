@@ -727,7 +727,8 @@ async function beginSpeech(){
   }
   if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}
 
-  spDeck=pool.sort(()=>Math.random()-.5).slice(0,10);
+  const spLimit=document.getElementById('spf-count-sel').value;
+  spDeck=spLimit==='all'?pool.sort(()=>Math.random()-.5):pool.sort(()=>Math.random()-.5).slice(0,parseInt(spLimit));
   spIdx=0;spCorr=0;spWrong=[];
 
   // Speech token al
@@ -1953,6 +1954,14 @@ textarea{resize:vertical;min-height:54px}
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="ff-list" onchange="updateFCount()"><option value="">Alle Wörter</option></select></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="ff-sentences"> Beispielsätze anzeigen</label>
+    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
+      <select id="ff-count-sel">
+        <option value="20" selected>20 Wörter</option>
+        <option value="40">40 Wörter</option>
+        <option value="60">60 Wörter</option>
+        <option value="all">Alle Wörter</option>
+      </select>
+    </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="ff-count"></div>
   </div>
   <button class="btn pri" onclick="beginFlash()"><i class="ti ti-player-play"></i> Starten</button>
@@ -2002,6 +2011,14 @@ textarea{resize:vertical;min-height:54px}
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="mf-list" onchange="updateMCount()"><option value="">Alle Wörter</option></select></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="mf-sentences"> Beispielsätze anzeigen</label>
+    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
+      <select id="mf-count-sel">
+        <option value="20" selected>20 Wörter</option>
+        <option value="40">40 Wörter</option>
+        <option value="60">60 Wörter</option>
+        <option value="all">Alle Wörter</option>
+      </select>
+    </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="mf-count"></div>
   </div>
   <div id="ms-noun" class="step-box hidden">
@@ -2057,6 +2074,14 @@ textarea{resize:vertical;min-height:54px}
     </div>
     <div style="margin-top:8px"><span class="lbl">Wortliste</span><select id="wf-list" onchange="updateWCount()"><option value="">Alle Wörter</option></select></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:6px;color:var(--txt2)"><input type="checkbox" id="wf-sentences"> Beispielsätze anzeigen</label>
+    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
+      <select id="wf-count-sel">
+        <option value="20" selected>20 Wörter</option>
+        <option value="40">40 Wörter</option>
+        <option value="60">60 Wörter</option>
+        <option value="all">Alle Wörter</option>
+      </select>
+    </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="wf-count"></div>
   </div>
   <div id="ws-verb" class="step-box hidden">
@@ -2175,6 +2200,14 @@ textarea{resize:vertical;min-height:54px}
         <label><input type="radio" name="sp-type" value="word" checked> Einzelwörter</label>
         <label><input type="radio" name="sp-type" value="sentence"> Beispielsätze</label>
       </div>
+    </div>
+    <div style="margin-top:8px"><span class="lbl">Anzahl der Wörter</span>
+      <select id="spf-count-sel">
+        <option value="20" selected>20 Wörter</option>
+        <option value="40">40 Wörter</option>
+        <option value="60">60 Wörter</option>
+        <option value="all">Alle Wörter</option>
+      </select>
     </div>
     <div style="font-size:12px;color:var(--txt2);margin-top:8px" id="spf-count"></div>
   </div>
@@ -2681,7 +2714,7 @@ function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p
 
 // FLASHCARD
 function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen – Lernkarten':grp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Alle</option>';updateFChapters();if(window.fillListSelects)window.fillListSelects();go('s-fsetup');}
-function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);flDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
+function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);const flLimit=document.getElementById('ff-count-sel').value;flDeck=(flLimit==='all'?scored:scored.slice(0,parseInt(flLimit))).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
 function showFlash(){const w=flDeck[flIdx];flFlipped=false;flWord=w.word;document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · '+w.chapter:'');document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');const art=document.getElementById('fl-art');art.textContent='';art.style.color='';document.getElementById('fl-w').textContent=w.word;document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Plural: '+w.plural:'Tippen zum Umdrehen';document.getElementById('fl-tr').textContent=w.tr;let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;document.getElementById('fl-ex').textContent=ex;if(window.updateFavBtn)window.updateFavBtn('fl-fav-btn',w._id);renderWordStats('fl-stats',w);}
 function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');
   const w=flDeck[flIdx];
@@ -2802,7 +2835,8 @@ function beginMulti(){const lv=document.getElementById('mf-level').value;const c
     mShowSentences=document.getElementById('mf-sentences').checked;
     const scored=deck.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));
     scored.sort((a,b)=>b.score-a.score);
-    mDeck=scored.slice(0,10).map(s=>s.w).sort(()=>Math.random()-.5);
+    const mLimit=document.getElementById('mf-count-sel').value;
+    mDeck=(mLimit==='all'?scored:scored.slice(0,parseInt(mLimit))).map(s=>s.w).sort(()=>Math.random()-.5);
     mIdx=0;mCorr=0;mWrong=[];
     document.getElementById('mt-title').textContent=mGrp==='noun'?'Nomen – Multiple-Choice-Test':mGrp==='verb'?'Verben – Multiple-Choice-Test':'Adjektiv – Multiple-Choice-Test';
     go('s-multi');showMulti();
@@ -2867,7 +2901,7 @@ function beginWrite(){const lv=document.getElementById('wf-level').value;const c
         hideLoading();
       }
     }
-    if(wGrp==='verb'&&wTense==='praesens'){const filtered=pool.filter(w=>w.praesens&&w.praesens[wPron]);if(!filtered.length){alert('Keine Daten für die gewählte Person!');return;}wDeck=filtered.sort(()=>Math.random()-.5).slice(0,10);}else if(wGrp==='verb'&&wTense==='mastar'){const shuffled=[...pool].sort(()=>Math.random()-.5).slice(0,10);wDeck=shuffled;}else if(wGrp==='verb'){const filtered=pool.filter(w=>w[wTense]);if(!filtered.length){alert('Keine Daten für die gewählte Zeitform!');return;}wDeck=filtered.sort(()=>Math.random()-.5).slice(0,10);}else{wDeck=pool.sort(()=>Math.random()-.5).slice(0,10);}wIdx=0;wStep=0;wCorr=0;wWrong=[];wShowSentences=document.getElementById('wf-sentences').checked;document.getElementById('wt-title').textContent=wGrp==='noun'?'Nomen – Schreibtest':wGrp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';go('s-write');showWrite();
+    const wLimit=document.getElementById('wf-count-sel').value;const wSlice=arr=>wLimit==='all'?arr:arr.slice(0,parseInt(wLimit));if(wGrp==='verb'&&wTense==='praesens'){const filtered=pool.filter(w=>w.praesens&&w.praesens[wPron]);if(!filtered.length){alert('Keine Daten für die gewählte Person!');return;}wDeck=wSlice(filtered.sort(()=>Math.random()-.5));}else if(wGrp==='verb'&&wTense==='mastar'){const shuffled=[...pool].sort(()=>Math.random()-.5);wDeck=wSlice(shuffled);}else if(wGrp==='verb'){const filtered=pool.filter(w=>w[wTense]);if(!filtered.length){alert('Keine Daten für die gewählte Zeitform!');return;}wDeck=wSlice(filtered.sort(()=>Math.random()-.5));}else{wDeck=wSlice(pool.sort(()=>Math.random()-.5));}wIdx=0;wStep=0;wCorr=0;wWrong=[];wShowSentences=document.getElementById('wf-sentences').checked;document.getElementById('wt-title').textContent=wGrp==='noun'?'Nomen – Schreibtest':wGrp==='verb'?'Verben – Schreibtest':'Adjektiv – Schreibtest';go('s-write');showWrite();
   }
   loadAndStart();
 }
