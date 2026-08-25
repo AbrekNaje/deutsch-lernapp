@@ -138,12 +138,29 @@ async function loadUserProfile(user) {
 }
 
 async function loadWords() {
+  const user = window._currentUser || currentUser;
+  const CACHE_KEY = 'dl_words_' + user.uid;
+  const SYNC_KEY  = 'dl_sync_'  + user.uid;
+
+  // --- Cache'den anında yükle ---
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      window._words = parsed;
+      updateHome();
+      if(window.hideLoading) window.hideLoading();
+      updateSyncInfo(user.uid);
+      // Arka planda delta sync yap
+      _backgroundSync(user);
+      return;
+    } catch(e) { /* bozuk cache — normal yükle */ }
+  }
+
+  // --- İlk yükleme (cache yok) ---
   window._words = [];
   showLoading('Verbindung wird hergestellt...', 10);
   try {
-    const user = window._currentUser || currentUser;
-
-    // Adım 1: Özet — anında göster
     setLoadingPct(20);
     document.getElementById('loading-msg').textContent='Übersicht wird geladen...';
     const summary = await azureCall({ action: 'getSummary', userId: user.uid });
@@ -153,17 +170,20 @@ async function loadWords() {
         `Nomen: ${c.nomen} · Verben: ${c.verben} · Adjektiv: ${c.adjektiv}`;
     }
     setLoadingPct(40);
-    hideLoading();
 
-    // Adım 2: Hafif kelime listesi — arka planda
     document.getElementById('loading-msg').textContent='Wörter werden geladen...';
-    document.getElementById('loading').classList.add('show');
     setLoadingPct(50);
 
     const res = await azureCall({ action: 'getAllLight', userId: user.uid });
     setLoadingPct(90);
     if (res.success) {
       window._words = res.words;
+      // Cache'e kaydet
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(res.words));
+        const now = new Date().toISOString();
+        localStorage.setItem(SYNC_KEY, now);
+      } catch(e) { /* storage dolu olabilir */ }
       const c = res.counts;
       document.getElementById('loading-msg').textContent=
         `Nomen: ${c.nomen} · Verben: ${c.verben} · Adjektiv: ${c.adjektiv}`;
@@ -173,8 +193,9 @@ async function loadWords() {
     setLoadingPct(100);
     updateHome();
     toast(window._words.length + ' Wörter geladen');
+    updateSyncInfo(user.uid);
 
-    // Wortlisten'i arka planda önceden yükle (test ekranlarında hazır olsun)
+    // Wortlisten'i arka planda önceden yükle
     try {
       const listsRes = await azureCall({ action: 'getLists', userId: user.uid });
       if (listsRes.success && window._wordLists) {
@@ -185,12 +206,125 @@ async function loadWords() {
         }
         if (window.fillListSelects) window.fillListSelects();
       }
-    } catch(e) { /* sessizce geç, kritik değil */ }
+    } catch(e) { /* sessizce geç */ }
   } catch(e) {
     toast('Fehler: ' + e.message, false);
   }
   hideLoading();
 }
+
+// Delta sync — arka planda çalışır, kullanıcı fark etmez
+async function _backgroundSync(user) {
+  const CACHE_KEY = 'dl_words_' + user.uid;
+  const SYNC_KEY  = 'dl_sync_'  + user.uid;
+  const lastSync  = localStorage.getItem(SYNC_KEY);
+  if (!lastSync) return;
+
+  // 24 saatten az geçmişse sync yapma
+  const elapsed = Date.now() - new Date(lastSync).getTime();
+  if (elapsed < 24 * 60 * 60 * 1000) return;
+
+  try {
+    const res = await azureCall({ action: 'syncDelta', userId: user.uid, lastSync });
+    if (!res.success || res.noActivity) return;
+
+    const { changed, deleted, syncTime } = res;
+    if (!changed.length && !deleted.length) {
+      // Değişiklik yok — sadece sync zamanını güncelle
+      localStorage.setItem(SYNC_KEY, syncTime);
+      updateSyncInfo(user.uid);
+      return;
+    }
+
+    // Silinen kelimeleri çıkar
+    if (deleted.length) {
+      window._words = window._words.filter(w => !deleted.includes(w._id));
+    }
+
+    // Değişen/yeni kelimeleri güncelle
+    changed.forEach(newW => {
+      const idx = window._words.findIndex(w => w._id === newW._id);
+      if (idx >= 0) window._words[idx] = newW; // güncelle
+      else window._words.push(newW);            // yeni ekle
+    });
+
+    // Cache'i güncelle
+    localStorage.setItem(CACHE_KEY, JSON.stringify(window._words));
+    localStorage.setItem(SYNC_KEY, syncTime);
+    updateHome();
+    updateSyncInfo(user.uid);
+
+    const msg = [];
+    if (changed.length) msg.push(changed.length + ' aktualisiert');
+    if (deleted.length) msg.push(deleted.length + ' gelöscht');
+    toast('Sync: ' + msg.join(', '));
+  } catch(e) { /* ağ hatası — sessizce geç */ }
+}
+
+// Manuel sync — ayarlar ekranındaki butondan çağrılır
+async function manualSync() {
+  const user = window._currentUser || currentUser;
+  if (!user) return;
+  const CACHE_KEY = 'dl_words_' + user.uid;
+  const SYNC_KEY  = 'dl_sync_'  + user.uid;
+  const btn = document.getElementById('sync-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Wird aktualisiert...'; }
+
+  try {
+    const lastSync = localStorage.getItem(SYNC_KEY);
+    let res;
+
+    if (!lastSync) {
+      // Cache hiç yok — tam yükle
+      res = await azureCall({ action: 'getAllLight', userId: user.uid });
+      if (res.success) {
+        window._words = res.words;
+        localStorage.setItem(CACHE_KEY, JSON.stringify(res.words));
+        localStorage.setItem(SYNC_KEY, new Date().toISOString());
+        updateHome();
+        toast(res.words.length + ' Wörter geladen');
+      }
+    } else {
+      // Delta sync — lastSync'ten bağımsız, her zaman çalışır
+      res = await azureCall({ action: 'syncDelta', userId: user.uid, lastSync: new Date(0).toISOString() });
+      if (res.success && !res.noActivity) {
+        const { changed, deleted, syncTime } = res;
+        if (deleted.length) window._words = window._words.filter(w => !deleted.includes(w._id));
+        changed.forEach(newW => {
+          const idx = window._words.findIndex(w => w._id === newW._id);
+          if (idx >= 0) window._words[idx] = newW;
+          else window._words.push(newW);
+        });
+        localStorage.setItem(CACHE_KEY, JSON.stringify(window._words));
+        localStorage.setItem(SYNC_KEY, syncTime);
+        updateHome();
+        const msg = [];
+        if (changed.length) msg.push(changed.length + ' aktualisiert');
+        if (deleted.length) msg.push(deleted.length + ' gelöscht');
+        toast('Sync abgeschlossen: ' + (msg.length ? msg.join(', ') : 'Keine Änderungen'));
+      } else {
+        toast('Keine Änderungen gefunden');
+      }
+    }
+  } catch(e) {
+    toast('Sync-Fehler: ' + e.message, false);
+  }
+
+  updateSyncInfo(user.uid);
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-refresh"></i> Daten jetzt aktualisieren'; }
+}
+
+// Sync bilgisini ayarlar ekranında göster
+function updateSyncInfo(uid) {
+  const el = document.getElementById('sync-info');
+  if (!el) return;
+  const ts = localStorage.getItem('dl_sync_' + uid);
+  if (!ts) { el.textContent = 'Letztes Update: –'; return; }
+  const d = new Date(ts);
+  el.textContent = 'Letztes Update: ' + d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+}
+window._manualSync = manualSync;
+window._updateSyncInfo = updateSyncInfo;
 
 // AUTH
 // Firebase referanslarını window'a aktar — normal script bloğundan erişim için
@@ -359,6 +493,7 @@ window.saveWord = async function() {
     }
     w._id = res._id; w._col = res._col;
     window._words.push(w);
+    _saveWordsCache();
     updateHome(); fillAddLookups(); clearForm();
     toast('Gespeichert!');
   } catch(e) { toast('Speicherfehler: '+e.message, false); }
@@ -383,6 +518,7 @@ window.delWord = async function(id, col) {
     const res = await azureCall({ action: 'delete', userId: user.uid, _id: id, _col: col });
     if (!res.success) throw new Error(res.error || 'Löschfehler');
     window._words = (window._words||[]).filter(w=>w._id!==id);
+    _saveWordsCache();
     renderList(); updateHome(); toast('Gelöscht');
   } catch(e) { toast('Löschfehler: '+e.message, false); }
   hideLoading();
@@ -1753,8 +1889,12 @@ textarea{resize:vertical;min-height:54px}
   <button class="btn" onclick="openUserReport()"><i class="ti ti-chart-bar"></i> Mein Bericht</button>
   <button class="btn" id="admin-btn" style="display:none" onclick="openAdminReport()"><i class="ti ti-shield"></i> Admin-Bericht</button>
   <button class="btn" onclick="go('s-help')"><i class="ti ti-help"></i> CSV-Anleitung</button>
+  <div class="section" style="margin-top:8px">
+    <div class="section-title"><i class="ti ti-refresh" style="margin-right:6px"></i>Daten-Synchronisation</div>
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:8px" id="sync-info">Letztes Update: –</div>
+    <button class="btn pri" id="sync-btn" onclick="manualSync()"><i class="ti ti-refresh"></i> Daten jetzt aktualisieren</button>
+  </div>
   <button class="btn" style="color:var(--danger);border-color:var(--danger)" onclick="doLogout()"><i class="ti ti-logout"></i> Abmelden</button>
-  <div style="text-align:center;font-size:11px;color:var(--txt3);margin-top:16px">Beta 26.06.23.11.16</div>
   <div style="text-align:center;font-size:11px;color:var(--txt3);margin-top:16px">Beta 26.06.23.11.16</div>
 </div>
 
@@ -2455,6 +2595,20 @@ function hideLoading(){
 }
 window.hideLoading = hideLoading;
 
+// Cache yardımcısı — module script'teki fonksiyonları normal script'ten çağırabilmek için
+function _saveWordsCache() {
+  const user = window._currentUser;
+  if (!user) return;
+  try {
+    localStorage.setItem('dl_words_' + user.uid, JSON.stringify(window._words || []));
+    localStorage.setItem('dl_sync_'  + user.uid, new Date().toISOString());
+  } catch(e) {}
+}
+window._saveWordsCache = _saveWordsCache;
+
+function manualSync() { if(window._manualSync) window._manualSync(); }
+window.manualSync = manualSync;
+
 function renderWordStats(elId, w) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -2489,7 +2643,7 @@ function go(id){
     renderList();
   }
   if(id==='s-search'){document.getElementById('search-inp').value='';doSearch();setTimeout(()=>document.getElementById('search-inp').focus(),100);}
-  if(id==='s-settings'){updateSettingsProfile();}
+  if(id==='s-settings'){updateSettingsProfile();const u=window._currentUser;if(u&&window._updateSyncInfo)window._updateSyncInfo(u.uid);}
 }
 
 function updateHome(){
