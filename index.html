@@ -94,19 +94,41 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     window._currentUser = user;
-    await loadUserProfile(user);
-    if (!userProfile.anaAil) {
-      // Yeni kullanıcı — dil seçimi ekranına git
-      go('s-lang');
-    } else {
+
+    // Profil cache'den hemen yükle — cold start bekleme
+    const cachedProfile = localStorage.getItem('dl_profile_' + user.uid);
+    if (cachedProfile) {
+      try {
+        userProfile = JSON.parse(cachedProfile);
+        window._userProfile = userProfile;
+      } catch(e) {}
+    }
+
+    if (cachedProfile && userProfile?.anaAil) {
+      // Cache var — kelimeleri hemen yükle, ensureUser arka planda gitsin
+      azureCall({ action: 'ensureUser', userId: user.uid, email: user.email })
+        .then(res => {
+          if (res.success) {
+            const p = { email: res.profile.Email, anaAil: res.profile.AnaDil, kullaniciTipi: res.profile.KullaniciTipi, programAdi: res.profile.ProgramAdi || 'Klett' };
+            localStorage.setItem('dl_profile_' + user.uid, JSON.stringify(p));
+            userProfile = p; window._userProfile = p;
+          }
+        }).catch(()=>{});
+      azureCall({ action: 'logSession', userId: user.uid }).catch(()=>{});
       await loadWords();
-      // İlk giriş kontrolü — help ekranı göster
       const helpSeen = localStorage.getItem('dl_help_seen_' + user.uid);
-      if (!helpSeen) {
-        updateHelpScreen(userProfile.anaAil);
-        go('s-help-intro');
+      if (!helpSeen) { updateHelpScreen(userProfile.anaAil); go('s-help-intro'); }
+      else { go('s-home'); }
+    } else {
+      // Cache yok — normal akış
+      await loadUserProfile(user);
+      if (!userProfile.anaAil) {
+        go('s-lang');
       } else {
-        go('s-home');
+        await loadWords();
+        const helpSeen = localStorage.getItem('dl_help_seen_' + user.uid);
+        if (!helpSeen) { updateHelpScreen(userProfile.anaAil); go('s-help-intro'); }
+        else { go('s-home'); }
       }
     }
   } else {
@@ -129,6 +151,8 @@ async function loadUserProfile(user) {
       kullaniciTipi: res.profile.KullaniciTipi,
       programAdi: res.profile.ProgramAdi || 'Klett'
     };
+    // Profili cache'e kaydet
+    try { localStorage.setItem('dl_profile_' + user.uid, JSON.stringify(userProfile)); } catch(e) {}
   } else {
     userProfile = { email: user.email, anaAil: '', kullaniciTipi: 1, programAdi: 'Klett' };
   }
@@ -151,8 +175,8 @@ async function loadWords() {
       updateHome();
       if(window.hideLoading) window.hideLoading();
       updateSyncInfo(user.uid);
-      // Arka planda delta sync yap
-      _backgroundSync(user);
+      // Arka planda delta sync yap — 5 sn geciktir
+      setTimeout(() => _backgroundSync(user), 5000);
       return;
     } catch(e) { /* bozuk cache — normal yükle */ }
   }
