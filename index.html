@@ -285,7 +285,7 @@ async function _backgroundSync(user) {
   } catch(e) { /* ağ hatası — sessizce geç */ }
 }
 
-// Manuel sync — ayarlar ekranındaki butondan çağrılır
+// Manuel sync — ayarlar ekranındaki butondan çağrılır — her zaman tam yükleme yapar
 async function manualSync() {
   const user = window._currentUser || currentUser;
   if (!user) return;
@@ -295,40 +295,16 @@ async function manualSync() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Wird aktualisiert...'; }
 
   try {
-    const lastSync = localStorage.getItem(SYNC_KEY);
-    let res;
-
-    if (!lastSync) {
-      // Cache hiç yok — tam yükle
-      res = await azureCall({ action: 'getAllLight', userId: user.uid });
-      if (res.success) {
-        window._words = res.words;
-        localStorage.setItem(CACHE_KEY, JSON.stringify(res.words));
-        localStorage.setItem(SYNC_KEY, new Date().toISOString());
-        updateHome();
-        toast(res.words.length + ' Wörter geladen');
-      }
+    // Her zaman tam yükleme — fiziksel silmeleri de yakalar
+    const res = await azureCall({ action: 'getAllLight', userId: user.uid });
+    if (res.success) {
+      window._words = res.words;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(res.words));
+      localStorage.setItem(SYNC_KEY, new Date().toISOString());
+      updateHome();
+      toast(res.words.length + ' Wörter geladen');
     } else {
-      // Delta sync — lastSync'ten bağımsız, her zaman çalışır
-      res = await azureCall({ action: 'syncDelta', userId: user.uid, lastSync: new Date(0).toISOString() });
-      if (res.success && !res.noActivity) {
-        const { changed, deleted, syncTime } = res;
-        if (deleted.length) window._words = window._words.filter(w => !deleted.includes(w._id));
-        changed.forEach(newW => {
-          const idx = window._words.findIndex(w => w._id === newW._id);
-          if (idx >= 0) window._words[idx] = newW;
-          else window._words.push(newW);
-        });
-        localStorage.setItem(CACHE_KEY, JSON.stringify(window._words));
-        localStorage.setItem(SYNC_KEY, syncTime);
-        updateHome();
-        const msg = [];
-        if (changed.length) msg.push(changed.length + ' aktualisiert');
-        if (deleted.length) msg.push(deleted.length + ' gelöscht');
-        toast('Sync abgeschlossen: ' + (msg.length ? msg.join(', ') : 'Keine Änderungen'));
-      } else {
-        toast('Keine Änderungen gefunden');
-      }
+      toast('Sync-Fehler: ' + (res.error || 'Unbekannt'), false);
     }
   } catch(e) {
     toast('Sync-Fehler: ' + e.message, false);
