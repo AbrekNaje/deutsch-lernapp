@@ -2849,7 +2849,7 @@ fillLangSelect();
 })();
 
 // Kelime yardımcıları
-function grpPool(grp){const w=window._words||[];return w.filter(x=>grp==='noun'?x.type==='noun':grp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron'));}
+function grpPool(grp){const w=window._words||[];return w.filter(x=>grp==='noun'?x.type==='noun':grp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron'||x.type==='other'));}
 function applyFilter(pool,level,chapter){let r=pool;if(level)r=r.filter(w=>w.level===level);if(chapter)r=r.filter(w=>String(w.chapter)===String(chapter));return r;}
 function fillLevels(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const levels=[...new Set(pool.map(w=>w.level).filter(l=>l))].sort();sel.innerHTML='<option value="">Alle</option>'+levels.map(l=>`<option value="${l}">${l}</option>`).join('');if(levels.includes(cur))sel.value=cur;else sel.value='';}
 function fillChapters(selectId,pool){const sel=document.getElementById(selectId);const cur=sel.value;const chapters=[...new Set(pool.map(w=>w.chapter).filter(c=>c&&String(c).trim()))].sort((a,b)=>{const getNum=s=>{const m=String(s).match(/\d+/);return m?Number(m[0]):NaN;};const na=getNum(a),nb=getNum(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});sel.innerHTML='<option value="">Alle</option>'+chapters.map(c=>`<option value="${c}">${c}</option>`).join('');if(chapters.map(String).includes(String(cur)))sel.value=cur;else sel.value='';}
@@ -3202,7 +3202,7 @@ function renderList(){
   const ch=document.getElementById('lf-ch')?.value||'';
   const favOnly=document.getElementById('lf-fav')?.checked||false;
   const q=document.getElementById('lf-search')?.value.trim().toLowerCase()||'';
-  let filtered=w.filter(x=>{const ok=listGrp==='noun'?x.type==='noun':listGrp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron');return ok&&(!lv||x.level===lv)&&(!ch||x.chapter===ch);});
+  let filtered=w.filter(x=>{const ok=listGrp==='noun'?x.type==='noun':listGrp==='verb'?x.type==='verb':(x.type==='adj'||x.type==='pron'||x.type==='other');return ok&&(!lv||x.level===lv)&&(!ch||x.chapter===ch);});
   if(favOnly){
     filtered=filtered.filter(x=>getWordListName(x._id)!==null);
   }
