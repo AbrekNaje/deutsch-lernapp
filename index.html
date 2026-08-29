@@ -79,6 +79,12 @@ window.t = t;
 const AZURE_API = 'https://deutsch-lernapp-api-eseqdhbkbaehftfa.swedencentral-01.azurewebsites.net/api';
 window._AZURE_API = AZURE_API;
 
+// Loading helper — normal script yüklenmeden önce de çalışır
+function _hideLoading() {
+  const el = document.getElementById('loading');
+  if (el) el.classList.remove('show');
+}
+
 async function azureCall(body) {
   const res = await fetch(AZURE_API + '/words', {
     method: 'POST',
@@ -120,16 +126,21 @@ onAuthStateChanged(auth, async (user) => {
       if (!helpSeen) { updateHelpScreen(userProfile.anaAil); go('s-help-intro'); }
       else { go('s-home'); }
     } else {
-      // Cache yok — normal akış
-      await loadUserProfile(user);
-      if (!userProfile.anaAil) {
-        go('s-lang');
-      } else {
-        await loadWords();
-        const helpSeen = localStorage.getItem('dl_help_seen_' + user.uid);
-        if (!helpSeen) { updateHelpScreen(userProfile.anaAil); go('s-help-intro'); }
-        else { go('s-home'); }
-      }
+      // Cache yok — yeni kullanıcı olabilir
+      // Hemen loading'i kapat ve dil ekranını göster
+      document.getElementById('loading')?.classList.remove('show');
+      go('s-lang');
+      // Arka planda profil yükle
+      loadUserProfile(user).then(() => {
+        if (userProfile.anaAil) {
+          // Dil zaten seçilmiş (eski kullanıcı, cache silinmiş)
+          loadWords().then(() => {
+            const helpSeen = localStorage.getItem('dl_help_seen_' + user.uid);
+            if (!helpSeen) { updateHelpScreen(userProfile.anaAil); go('s-help-intro'); }
+            else { go('s-home'); }
+          });
+        }
+      }).catch(()=>{});
     }
   } else {
     currentUser = null;
@@ -137,7 +148,7 @@ onAuthStateChanged(auth, async (user) => {
     userProfile = null;
     words = [];
     // Karşılama ekranına git
-    if(window.hideLoading) window.hideLoading();
+    if(window.hideLoading) window.hideLoading(); else _hideLoading();
     go('s-welcome');
   }
 });
@@ -173,7 +184,7 @@ async function loadWords() {
       const parsed = JSON.parse(cached);
       window._words = parsed;
       updateHome();
-      if(window.hideLoading) window.hideLoading();
+      if(window.hideLoading) window.hideLoading(); else _hideLoading();
       updateSyncInfo(user.uid);
       // Arka planda delta sync yap — 5 sn geciktir
       setTimeout(() => _backgroundSync(user), 5000);
