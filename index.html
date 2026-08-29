@@ -617,17 +617,31 @@ window.aiFill = async function() {
 
 window.openMasterImport = async function() {
   go('s-master-import');
-  // Seviye ve bölüm listelerini yükle
   showLoading('Wird geladen...', 30);
   try {
-    const programAdi = window._userProfile ? window._userProfile.programAdi : 'Klett';
+    // Tüm programları yükle
+    const allRes = await azureCall({ action: 'getPrograms' });
+    if (allRes.success) {
+      const programSel = document.getElementById('mi-program');
+      const activeProgram = window._userProfile ? window._userProfile.programAdi : 'Klett';
+      programSel.innerHTML = allRes.programs.map(p =>
+        `<option value="${p}"${p===activeProgram?' selected':''}>${p}</option>`
+      ).join('');
+    }
+    await masterProgramChange();
+  } catch(e) { toast('Fehler: ' + e.message, false); }
+  hideLoading();
+};
+
+window.masterProgramChange = async function() {
+  const programAdi = document.getElementById('mi-program').value;
+  try {
     const res = await azureCall({ action: 'masterPreview', tur: 'all', seviye: 'all', bolum: 'all', programAdi });
     if (res.success) {
       const seviyeSel = document.getElementById('mi-seviye');
       const bolumSel = document.getElementById('mi-bolum');
       seviyeSel.innerHTML = '<option value="all">Alle</option>' +
         res.seviyeler.map(s => `<option value="${s}">${s}</option>`).join('');
-      // Bölümleri sayısal sırala
       const bolumler = res.bolumler.sort((a,b) => { const na=String(a).match(/\d+/), nb=String(b).match(/\d+/); return na&&nb?Number(na[0])-Number(nb[0]):String(a).localeCompare(String(b)); });
       bolumSel.innerHTML = '<option value="all">Alle</option>' +
         bolumler.map(b => `<option value="${b}">${b}</option>`).join('');
@@ -635,16 +649,15 @@ window.openMasterImport = async function() {
       document.getElementById('mi-import-btn').disabled = false;
     }
   } catch(e) { toast('Fehler: ' + e.message, false); }
-  hideLoading();
 };
 
 window.masterPreviewUpdate = async function() {
   const tur = document.getElementById('mi-tur').value;
   const seviye = document.getElementById('mi-seviye').value;
   const bolum = document.getElementById('mi-bolum').value;
+  const programAdi = document.getElementById('mi-program').value;
   try {
-    const programAdi = window._userProfile ? window._userProfile.programAdi : 'Klett';
-  const res = await azureCall({ action: 'masterPreview', tur, seviye, bolum, programAdi });
+    const res = await azureCall({ action: 'masterPreview', tur, seviye, bolum, programAdi });
     if (res.success) {
       document.getElementById('mi-preview').textContent = `${res.toplam} Wörter gefunden`;
       document.getElementById('mi-import-btn').disabled = res.toplam === 0;
@@ -656,8 +669,8 @@ window.doMasterImport = async function() {
   const tur = document.getElementById('mi-tur').value;
   const seviye = document.getElementById('mi-seviye').value;
   const bolum = document.getElementById('mi-bolum').value;
+  const programAdi = document.getElementById('mi-program').value;
   const user = window._currentUser;
-  const programAdi = window._userProfile ? window._userProfile.programAdi : 'Klett';
   showLoading('Wird importiert...', 20);
   try {
     const res = await azureCall({ action: 'masterImport', userId: user.uid, tur, seviye, bolum, programAdi });
@@ -1951,7 +1964,11 @@ textarea{resize:vertical;min-height:54px}
   </div>
   <div class="section">
     <div class="section-title">Filter</div>
-    <span class="lbl">Wortart</span>
+    <span class="lbl">Programm</span>
+    <select id="mi-program" onchange="masterProgramChange()">
+      <option value="Klett">Klett</option>
+    </select>
+    <span class="lbl" style="margin-top:8px">Wortart</span>
     <select id="mi-tur" onchange="masterPreviewUpdate()">
       <option value="all">Alle</option>
       <option value="noun">Nomen</option>
