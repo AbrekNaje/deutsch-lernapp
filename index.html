@@ -2737,7 +2737,7 @@ function updateSettingsProfile(){
   const adminBtn=document.getElementById('admin-btn');
   if(adminBtn)adminBtn.style.display=(profile.kullaniciTipi>=4)?'block':'none';
   const sel=document.getElementById('lang-change');
-  sel.innerHTML='<option value="">-- Bitte wählen --</option>'+LANGS.map(l=>`<option value="${l.code}"${l.code===profile.anaAil?' selected':''}>${l.name}</option>`).join('');
+  if(sel) sel.innerHTML='<option value="">-- Bitte wählen --</option>'+LANGS.map(l=>`<option value="${l.code}"${l.code===profile.anaAil?' selected':''}>${l.name}</option>`).join('');
 }
 
 window.changeLang = async function(){
