@@ -1319,29 +1319,84 @@ window.openTextSetup = async function() {
   go('s-textsetup');
   showLoading('Texte werden geladen...',30);
   try {
-    const res = await azureCall({ action: 'getTexts', seviye: 'all', bolum: 'all' });
-    if (res.success) {
-      // Seviye ve bölüm filtrelerini doldur
-      const seviyeler=[...new Set(res.texts.map(t=>t.Seviye).filter(Boolean))].sort();
-      const bolumler=[...new Set(res.texts.map(t=>t.Bolum).filter(Boolean))].sort();
-      const lvSel=document.getElementById('tf-level');
-      const chSel=document.getElementById('tf-chapter');
-      lvSel.innerHTML='<option value="all">Alle</option>'+seviyeler.map(s=>`<option value="${s}">${s}</option>`).join('');
-      chSel.innerHTML='<option value="all">Alle</option>'+bolumler.map(b=>`<option value="${b}">${b}</option>`).join('');
-      renderTextList(res.texts);
-      window._allTexts=res.texts;
+    // Program seçiciyi doldur
+    const allRes = await azureCall({ action: 'getPrograms' });
+    if (allRes.success) {
+      const activeProgram = window._userProfile ? window._userProfile.programAdi : 'Klett';
+      const programSel = document.getElementById('tf-program');
+      programSel.innerHTML = allRes.programs.map(p =>
+        `<option value="${p}"${p===activeProgram?' selected':''}>${p}</option>`
+      ).join('');
     }
+    await loadTextsByProgram();
   } catch(e) { toast('Fehler: '+e.message,false); }
   hideLoading();
 };
 
-window.updateTextFilter = function() {
+async function loadTextsByProgram() {
+  const program = document.getElementById('tf-program')?.value || 'Klett';
+  try {
+    if (program === 'Klett') {
+      // Klett → Texts tablosundan uzun metinler
+      const res = await azureCall({ action: 'getTexts', seviye: 'all', bolum: 'all', programAdi: program });
+      if (res.success) {
+        const seviyeler=[...new Set(res.texts.map(t=>t.Seviye).filter(Boolean))].sort();
+        const bolumler=[...new Set(res.texts.map(t=>t.Bolum).filter(Boolean))].sort();
+        const lvSel=document.getElementById('tf-level');
+        const chSel=document.getElementById('tf-chapter');
+        lvSel.innerHTML='<option value="all">Alle</option>'+seviyeler.map(s=>`<option value="${s}">${s}</option>`).join('');
+        chSel.innerHTML='<option value="all">Alle</option>'+bolumler.map(b=>`<option value="${b}">${b}</option>`).join('');
+        window._allTexts = res.texts;
+        window._textMode = 'texts';
+        renderTextList(res.texts);
+      }
+    } else {
+      // Diğer programlar → Sentences tablosundan cümleler
+      const res = await azureCall({ action: 'getSentencesByProgram', programAdi: program });
+      if (res.success) {
+        const seviyeler=[...new Set(res.sentences.map(s=>s.Seviye).filter(Boolean))].sort();
+        const bolumler=[...new Set(res.sentences.map(s=>s.Bolum).filter(Boolean))].sort((a,b)=>{
+          const na=String(a).match(/\d+/), nb=String(b).match(/\d+/);
+          return na&&nb?Number(na[0])-Number(nb[0]):String(a).localeCompare(String(b));
+        });
+        const lvSel=document.getElementById('tf-level');
+        const chSel=document.getElementById('tf-chapter');
+        lvSel.innerHTML='<option value="all">Alle</option>'+seviyeler.map(s=>`<option value="${s}">${s}</option>`).join('');
+        chSel.innerHTML='<option value="all">Alle</option>'+bolumler.map(b=>`<option value="${b}">${b}</option>`).join('');
+        window._allTexts = res.sentences;
+        window._textMode = 'sentences';
+        renderSentenceList(res.sentences);
+      }
+    }
+  } catch(e) { toast('Fehler: '+e.message,false); }
+}
+window.loadTextsByProgram = loadTextsByProgram;
+
+window.updateTextFilter = async function() {
   const lv=document.getElementById('tf-level').value;
   const ch=document.getElementById('tf-chapter').value;
-  const texts=(window._allTexts||[]).filter(t=>
-    (lv==='all'||t.Seviye===lv)&&(ch==='all'||t.Bolum===ch)
-  );
-  renderTextList(texts);
+  if (window._textMode === 'sentences') {
+    const program = document.getElementById('tf-program')?.value || 'Mathe';
+    try {
+      const res = await azureCall({ action: 'getSentencesByProgram', programAdi: program, seviye: lv, bolum: ch });
+      if (res.success) {
+        // Seviye değişince bölüm listesini güncelle
+        if (ch === 'all') {
+          const bolumler=[...new Set(res.sentences.map(s=>s.Bolum).filter(Boolean))].sort((a,b)=>{
+            const na=String(a).match(/\d+/), nb=String(b).match(/\d+/);
+            return na&&nb?Number(na[0])-Number(nb[0]):String(a).localeCompare(String(b));
+          });
+          document.getElementById('tf-chapter').innerHTML='<option value="all">Alle</option>'+bolumler.map(b=>`<option value="${b}">${b}</option>`).join('');
+        }
+        renderSentenceList(res.sentences);
+      }
+    } catch(e) {}
+  } else {
+    const items=(window._allTexts||[]).filter(t=>
+      (lv==='all'||t.Seviye===lv)&&(ch==='all'||t.Bolum===ch)
+    );
+    renderTextList(items);
+  }
 };
 
 function renderTextList(texts){
@@ -1360,6 +1415,46 @@ function renderTextList(texts){
   `).join('');
 }
 
+function renderSentenceList(sentences){
+  const el=document.getElementById('tf-list');
+  const empty=document.getElementById('tf-empty');
+  if(!sentences.length){el.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  el.innerHTML=sentences.map((s,i)=>`
+    <div class="ncard" onclick="startSentenceView(${i})" style="cursor:pointer">
+      <div style="font-size:15px;font-weight:500;color:var(--txt);margin-bottom:4px">${s.AlmancaCumle||s.Almanca||''}</div>
+      <div style="font-size:13px;color:var(--txt2)">${s.CeviriCumle||s.Turkce||''}</div>
+      <div style="font-size:11px;color:var(--txt3);margin-top:4px">${s.Bolum||''}</div>
+    </div>
+  `).join('');
+}
+
+window.startSentenceView = function(idx) {
+  const s = (window._allTexts||[])[idx];
+  if (!s) return;
+  // Metni texttest ekranında göster
+  ttCurrentText = {
+    Baslik: s.Bolum || 'Satz',
+    Icerik: s.AlmancaCumle || s.Almanca || '',
+    Ceviri: s.CeviriCumle || s.Turkce || ''
+  };
+  document.getElementById('tt-title').textContent = s.Bolum || 'Satz';
+  document.getElementById('tt-content').textContent = ttCurrentText.Icerik;
+  // Türkçe çeviriyi göster
+  const trEl = document.getElementById('tt-translation');
+  if (trEl && ttCurrentText.Ceviri) {
+    trEl.textContent = ttCurrentText.Ceviri;
+    trEl.style.display = 'block';
+  }
+  document.getElementById('tt-result').classList.add('hidden');
+  document.getElementById('tt-next-bar').style.display='none';
+  document.getElementById('tt-playback').classList.add('hidden');
+  document.getElementById('tt-wave').classList.add('hidden');
+  document.getElementById('tt-status').textContent='Taste drücken und vorlesen';
+  document.getElementById('tt-mic-btn').style.background='var(--ac)';
+  go('s-texttest');
+};
+
 window.startTextTest = async function(id) {
   showLoading('Text wird geladen...',30);
   try {
@@ -1368,6 +1463,12 @@ window.startTextTest = async function(id) {
       ttCurrentText = res.text;
       document.getElementById('tt-title').textContent = res.text.Baslik;
       document.getElementById('tt-content').textContent = res.text.Icerik;
+      // Türkçe çeviri (varsa)
+      const trEl = document.getElementById('tt-translation');
+      if (trEl) {
+        if (res.text.CeviriIcerik) { trEl.textContent = res.text.CeviriIcerik; trEl.style.display='block'; }
+        else trEl.style.display='none';
+      }
       document.getElementById('tt-result').classList.add('hidden');
       document.getElementById('tt-next-bar').style.display='none';
       document.getElementById('tt-playback').classList.add('hidden');
@@ -2298,6 +2399,11 @@ textarea{resize:vertical;min-height:54px}
   <div class="topbar"><button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button><h1>Lesetest</h1></div>
   <div class="step-box">
     <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px"><i class="ti ti-filter" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Filter</div>
+    <div style="margin-bottom:8px"><span class="lbl">Programm</span>
+      <select id="tf-program" onchange="loadTextsByProgram()">
+        <option value="Klett">Klett</option>
+      </select>
+    </div>
     <div class="grid2">
       <div><span class="lbl">Stufe</span><select id="tf-level" onchange="updateTextFilter()"><option value="all">Alle</option></select></div>
       <div><span class="lbl">Kapitel</span><select id="tf-chapter" onchange="updateTextFilter()"><option value="all">Alle</option></select></div>
@@ -2315,6 +2421,8 @@ textarea{resize:vertical;min-height:54px}
   <div style="background:var(--bg2);border-radius:var(--rad);padding:16px;margin-bottom:12px">
     <div style="font-size:13px;color:var(--txt2);margin-bottom:6px">Lies den folgenden Text vor:</div>
     <div style="font-size:17px;line-height:1.8;color:var(--txt)" id="tt-content"></div>
+    <!-- Türkçe çeviri -->
+    <div id="tt-translation" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--brd);font-size:14px;color:var(--txt2);line-height:1.6"></div>
     <!-- Dinleme butonları -->
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn sm" onclick="ttSpeak(1)" title="Vorlesen"><i class="ti ti-volume"></i></button>
