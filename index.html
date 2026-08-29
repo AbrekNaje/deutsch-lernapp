@@ -325,6 +325,8 @@ function updateSyncInfo(uid) {
 }
 window._manualSync = manualSync;
 window._updateSyncInfo = updateSyncInfo;
+window.azureCall = azureCall;
+window.loadWords = loadWords;
 
 // AUTH
 // Firebase referanslarını window'a aktar — normal script bloğundan erişim için
@@ -1883,6 +1885,12 @@ textarea{resize:vertical;min-height:54px}
     <div style="font-size:13px;color:var(--txt3);margin-top:4px" id="profile-type"></div>
     <div style="font-size:13px;color:var(--txt3);margin-top:2px" id="profile-lang"></div>
   </div>
+  <div class="section" style="margin-top:8px">
+    <div class="section-title"><i class="ti ti-books" style="margin-right:6px"></i>Programm</div>
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:8px" id="active-program-info">Aktives Programm: –</div>
+    <div id="user-programs-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+    <button class="btn sm" onclick="openAddProgram()"><i class="ti ti-plus"></i> Neues Programm hinzufügen</button>
+  </div>
   <button class="btn" onclick="go('s-csv')"><i class="ti ti-upload"></i> CSV importieren</button>
   <button class="btn" onclick="openMasterImport()"><i class="ti ti-database-import"></i> Aus Masterdatenbank importieren</button>
   <button class="btn" onclick="openWordLists()"><i class="ti ti-list"></i> Wortlisten verwalten</button>
@@ -2609,6 +2617,66 @@ window._saveWordsCache = _saveWordsCache;
 function manualSync() { if(window._manualSync) window._manualSync(); }
 window.manualSync = manualSync;
 
+// Program yönetimi
+async function loadUserPrograms() {
+  const user = window._currentUser;
+  if (!user) return;
+  try {
+    const res = await azureCall({ action: 'getUserPrograms', userId: user.uid });
+    if (!res.success) return;
+    const list = document.getElementById('user-programs-list');
+    const infoEl = document.getElementById('active-program-info');
+    if (!list) return;
+    const active = res.programs.find(p => p.AktifMi);
+    if (infoEl && active) infoEl.textContent = 'Aktives Programm: ' + active.ProgramAdi;
+    list.innerHTML = res.programs.map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${p.AktifMi?'var(--acl)':'var(--bg2)'}">
+        <span style="font-size:14px;font-weight:${p.AktifMi?600:400};color:${p.AktifMi?'var(--ac)':'var(--txt)'}">${p.ProgramAdi}${p.AktifMi?' ✓':''}</span>
+        ${!p.AktifMi ? `<button class="btn sm" onclick="switchProgram('${p.ProgramAdi}')">Aktivieren</button>` : ''}
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function switchProgram(programAdi) {
+  const user = window._currentUser;
+  if (!user) return;
+  if (!confirm(`"${programAdi}" programına geçmek istiyor musunuz? Kelimeler yeniden yüklenecek.`)) return;
+  try {
+    const res = await azureCall({ action: 'switchUserProgram', userId: user.uid, programAdi });
+    if (res.success) {
+      // Profili güncelle
+      if (window._userProfile) window._userProfile.programAdi = programAdi;
+      userProfile.programAdi = programAdi;
+      try { localStorage.setItem('dl_profile_' + user.uid, JSON.stringify(userProfile)); } catch(e) {}
+      // Cache'i temizle — yeni program yüklensin
+      localStorage.removeItem('dl_words_' + user.uid);
+      localStorage.removeItem('dl_sync_' + user.uid);
+      toast('Programm gewechselt: ' + programAdi);
+      go('s-home');
+      if(window.loadWords) await window.loadWords();
+      else location.reload();
+    }
+  } catch(e) { toast('Fehler: ' + e.message, false); }
+}
+
+async function openAddProgram() {
+  try {
+    const res = await azureCall({ action: 'getPrograms' });
+    if (!res.success) return;
+    const user = window._currentUser;
+    const myRes = await azureCall({ action: 'getUserPrograms', userId: user.uid });
+    const myPrograms = myRes.success ? myRes.programs.map(p => p.ProgramAdi) : [];
+    const available = res.programs.filter(p => !myPrograms.includes(p));
+    if (!available.length) { toast('Alle verfügbaren Programme sind bereits hinzugefügt'); return; }
+    const programAdi = prompt('Verfügbare Programme:\n' + available.join(', ') + '\n\nProgramm-Name eingeben:');
+    if (!programAdi) return;
+    if (!available.includes(programAdi)) { toast('Ungültiger Programmname', false); return; }
+    const addRes = await azureCall({ action: 'addUserProgram', userId: user.uid, programAdi });
+    if (addRes.success) { toast('Programm hinzugefügt: ' + programAdi); loadUserPrograms(); }
+    else toast('Fehler: ' + (addRes.error || 'Unbekannt'), false);
+  } catch(e) { toast('Fehler: ' + e.message, false); }
+}
+
 function renderWordStats(elId, w) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -2643,7 +2711,7 @@ function go(id){
     renderList();
   }
   if(id==='s-search'){document.getElementById('search-inp').value='';doSearch();setTimeout(()=>document.getElementById('search-inp').focus(),100);}
-  if(id==='s-settings'){updateSettingsProfile();const u=window._currentUser;if(u&&window._updateSyncInfo)window._updateSyncInfo(u.uid);}
+  if(id==='s-settings'){updateSettingsProfile();const u=window._currentUser;if(u&&window._updateSyncInfo)window._updateSyncInfo(u.uid);loadUserPrograms();}
 }
 
 function updateHome(){
