@@ -981,16 +981,22 @@ function wrSpeak(w) {
     }
 
     const part = parts[partIdx];
+    const isLast = partIdx === parts.length - 1;
     partIdx++;
     const utt = new SpeechSynthesisUtterance(part.text);
     utt.lang = part.lang;
     utt.rate = rate;
     utt.onend = () => {
       wrSpeaking = false;
-      // Parçalar arası 3 sn bekle
-      wrTimer = setTimeout(() => {
-        if (wrPlaying) speakNext();
-      }, 3000);
+      if (isLast) {
+        // Son parça (Türkçe) bitti — 3 sn bekle (kart geçiş)
+        speakNext();
+      } else {
+        // Ara parçalar arası 3 sn bekle
+        wrTimer = setTimeout(() => {
+          if (wrPlaying) speakNext();
+        }, 3000);
+      }
     };
     wrSpeaking = true;
     window.speechSynthesis.speak(utt);
