@@ -828,6 +828,8 @@ window.selectListForReader = async function(listId, listName, modal) {
     startWordReader();
   }
 };
+
+window.startWordReader = function() {
   const items = (window._words||[]).filter(w =>
     window._listItems && window._listItems[_currentListId] &&
     window._listItems[_currentListId].some(i => i.WordId === w._id)
@@ -931,18 +933,19 @@ function wrSpeak(w) {
 function wrScheduleNext() {
   if (wrTimer) clearTimeout(wrTimer);
   wrTimer = setTimeout(() => {
-    if (!wrPlaying) return;
-    if (wrIdx >= wrWords.length - 1) {
+    if (!wrPlaying) {
+      // pause
+    } else if (wrIdx >= wrWords.length - 1) {
       // Liste bitti
       wrPlaying = false;
       document.getElementById('wr-status').textContent = 'Liste tamamlandı ✓';
       document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-play"></i> Tekrar';
       document.getElementById('wr-play-btn').onclick = () => { wrIdx=0; wrPlaying=true; wrShowWord(); wrScheduleNext(); document.getElementById('wr-play-btn').innerHTML='<i class="ti ti-player-pause"></i> Pause'; document.getElementById('wr-play-btn').onclick=wrToggle; };
-      return;
+    } else {
+      wrIdx++;
+      wrShowWord();
+      wrScheduleNext();
     }
-    wrIdx++;
-    wrShowWord();
-    wrScheduleNext();
   }, 3000);
 }
 
