@@ -783,9 +783,24 @@ let wrPlaying = false;
 let wrTimer = null;
 let wrSpeaking = false;
 
-window.openWordReaderSetup = function() {
+window.openWordReaderSetup = async function() {
+  // Listeler yüklü değilse önce yükle
   if (!window._wordLists || !window._wordLists.length) {
-    toast('Henüz kelime listesi yok. Önce liste oluştur.');
+    const user = window._currentUser;
+    if (user) {
+      try {
+        const res = await azureCall({ action: 'getLists', userId: user.uid });
+        if (res.success && res.lists && res.lists.length) {
+          window._wordLists = window._wordLists || [];
+          window._wordLists.length = 0;
+          window._wordLists.push(...res.lists);
+        }
+      } catch(e) {}
+    }
+  }
+  if (!window._wordLists || !window._wordLists.length) {
+    toast('Önce Wortlisten bölümünden liste oluştur.');
+    go('s-wordlists');
     return;
   }
   if (window._wordLists.length === 1) {
@@ -839,6 +854,8 @@ window.startWordReader = function() {
   wrIdx = 0;
   wrPlaying = true;
   go('s-word-reader');
+  document.getElementById('wr-status').textContent = 'Liest vor...';
+  document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-pause"></i> Pause';
   wrShowWord();
   wrScheduleNext();
 };
@@ -862,9 +879,7 @@ function wrShowWord() {
   document.getElementById('wr-word2').textContent = '';
 
   if (w.type === 'noun') {
-    // Artikel + kelime
-    const artikel = w.genus === 'f' ? 'die' : w.genus === 'n' ? 'das' : 'der';
-    document.getElementById('wr-word').textContent = `${artikel} ${w.word}`;
+    document.getElementById('wr-word').textContent = w.word;
     document.getElementById('wr-word2').textContent = w.plural ? `Plural: ${w.plural}` : '';
     document.getElementById('wr-tr').textContent = w.tr || '';
   } else if (w.type === 'verb') {
@@ -900,8 +915,7 @@ function wrSpeak(w) {
   const parts = [];
 
   if (w.type === 'noun') {
-    const artikel = w.genus === 'f' ? 'die' : w.genus === 'n' ? 'das' : 'der';
-    parts.push(`${artikel} ${w.word}`);
+    parts.push(w.word);
     if (w.plural) parts.push(`Plural: ${w.plural}`);
     if (w.tr) parts.push(w.tr);
   } else if (w.type === 'verb') {
