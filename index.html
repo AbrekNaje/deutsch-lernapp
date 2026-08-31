@@ -805,9 +805,14 @@ window.openWordReaderSetup = async function() {
   }
   if (window._wordLists.length === 1) {
     _currentListId = window._wordLists[0].Id;
-    document.getElementById('wld-title').textContent = window._wordLists[0].Name || 'Liste';
+    document.getElementById('wld-title').textContent = window._wordLists[0].ListName || 'Liste';
     azureCall({ action: 'getListWords', listId: _currentListId }).then(res => {
-      if (res.success) { renderListDetail(res.items); startWordReader(); }
+      if (res.success) {
+        window._listItems = window._listItems || {};
+        window._listItems[_currentListId] = res.items;
+        renderListDetail(res.items);
+        startWordReader();
+      }
     });
   } else {
     const modal = document.createElement('div');
@@ -818,9 +823,9 @@ window.openWordReaderSetup = async function() {
         <h3 style="margin:0 0 16px;font-size:16px">Liste seç</h3>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
           ${window._wordLists.map(l => `
-            <button onclick="selectListForReader(${l.Id},'${(l.Name||'Liste').replace(/'/g,"\\'")}',this.closest('[data-modal]'))"
+            <button onclick="selectListForReader(${l.Id},'${(l.ListName||'Liste').replace(/'/g,"\\'")}',this.closest('[data-modal]'))"
               style="padding:12px;border-radius:10px;background:var(--bg2);border:1px solid var(--brd);font-size:15px;text-align:left;cursor:pointer;color:var(--txt)">
-              <i class="ti ti-list" style="margin-right:8px;color:var(--ac)"></i>${l.Name||'Liste'}
+              <i class="ti ti-list" style="margin-right:8px;color:var(--ac)"></i>${l.ListName||'Liste'}
             </button>`).join('')}
         </div>
         <button onclick="document.querySelector('[data-modal]').remove()"
@@ -839,6 +844,9 @@ window.selectListForReader = async function(listId, listName, modal) {
   document.getElementById('wld-title').textContent = listName;
   const res = await azureCall({ action: 'getListWords', listId });
   if (res.success) {
+    // _listItems'a kaydet ki startWordReader görebilsin
+    window._listItems = window._listItems || {};
+    window._listItems[listId] = res.items;
     renderListDetail(res.items);
     startWordReader();
   }
