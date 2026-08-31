@@ -774,6 +774,164 @@ function renderListDetail(items) {
   `).join('');
 }
 
+// =============================================
+// KELİME OKUYUCU
+// =============================================
+let wrWords = [];
+let wrIdx = 0;
+let wrPlaying = false;
+let wrTimer = null;
+let wrSpeaking = false;
+
+window.startWordReader = function() {
+  const items = (window._words||[]).filter(w =>
+    window._listItems && window._listItems[_currentListId] &&
+    window._listItems[_currentListId].some(i => i.WordId === w._id)
+  );
+  if (!items.length) { toast('Liste boş'); return; }
+  wrWords = items;
+  wrIdx = 0;
+  wrPlaying = true;
+  go('s-word-reader');
+  wrShowWord();
+  wrScheduleNext();
+};
+
+function wrShowWord() {
+  const w = wrWords[wrIdx];
+  if (!w) return;
+
+  // İlerleme
+  document.getElementById('wr-progress').textContent = `${wrIdx+1} / ${wrWords.length}`;
+  document.getElementById('wr-bar').style.width = `${((wrIdx+1)/wrWords.length)*100}%`;
+
+  // Tip etiketi
+  const typeLabel = w.type==='noun'?'Nomen':w.type==='verb'?'Verb':w.type==='pron'?'Pronomen':'Adjektiv / Sonstige';
+  document.getElementById('wr-type').textContent = typeLabel;
+
+  // Kelime içeriği
+  const conjEl = document.getElementById('wr-conjugation');
+  conjEl.style.display = 'none';
+  conjEl.innerHTML = '';
+  document.getElementById('wr-word2').textContent = '';
+
+  if (w.type === 'noun') {
+    // Artikel + kelime
+    const artikel = w.genus === 'f' ? 'die' : w.genus === 'n' ? 'das' : 'der';
+    document.getElementById('wr-word').textContent = `${artikel} ${w.word}`;
+    document.getElementById('wr-word2').textContent = w.plural ? `Plural: ${w.plural}` : '';
+    document.getElementById('wr-tr').textContent = w.tr || '';
+  } else if (w.type === 'verb') {
+    document.getElementById('wr-word').textContent = w.word;
+    document.getElementById('wr-tr').textContent = w.tr || '';
+    // Çekimler
+    const p = w.praesens || {};
+    const rows = [
+      p.ich ? `ich &nbsp;&nbsp;&nbsp;&nbsp; ${p.ich}` : '',
+      p.du  ? `du &nbsp;&nbsp;&nbsp;&nbsp; ${p.du}` : '',
+      p.er  ? `er/sie/es &nbsp;&nbsp;&nbsp;&nbsp; ${p.er}` : '',
+      p.wir ? `wir &nbsp;&nbsp;&nbsp;&nbsp; ${p.wir}` : '',
+      p.ihr ? `ihr &nbsp;&nbsp;&nbsp;&nbsp; ${p.ihr}` : '',
+      p.sie ? `sie/Sie &nbsp;&nbsp;&nbsp;&nbsp; ${p.sie}` : '',
+      w.perfekt ? `Perfekt: ${w.perfekt}` : '',
+      w.praeteritum ? `Präteritum: ${w.praeteritum}` : '',
+    ].filter(Boolean);
+    if (rows.length) {
+      conjEl.innerHTML = rows.map(r=>`<div>${r}</div>`).join('');
+      conjEl.style.display = 'block';
+    }
+  } else {
+    document.getElementById('wr-word').textContent = w.word;
+    document.getElementById('wr-tr').textContent = w.tr || '';
+  }
+
+  // Sesli oku
+  wrSpeak(w);
+}
+
+function wrSpeak(w) {
+  window.speechSynthesis.cancel();
+  const parts = [];
+
+  if (w.type === 'noun') {
+    const artikel = w.genus === 'f' ? 'die' : w.genus === 'n' ? 'das' : 'der';
+    parts.push(`${artikel} ${w.word}`);
+    if (w.plural) parts.push(`Plural: ${w.plural}`);
+    if (w.tr) parts.push(w.tr);
+  } else if (w.type === 'verb') {
+    parts.push(w.word);
+    const p = w.praesens || {};
+    if (p.ich) parts.push(`ich ${p.ich}`);
+    if (p.du)  parts.push(`du ${p.du}`);
+    if (p.er)  parts.push(`er ${p.er}`);
+    if (p.wir) parts.push(`wir ${p.wir}`);
+    if (p.ihr) parts.push(`ihr ${p.ihr}`);
+    if (p.sie) parts.push(`sie ${p.sie}`);
+    if (w.perfekt) parts.push(`Perfekt: ${w.perfekt}`);
+    if (w.praeteritum) parts.push(`Präteritum: ${w.praeteritum}`);
+    if (w.tr) parts.push(w.tr);
+  } else {
+    parts.push(w.word);
+    if (w.tr) parts.push(w.tr);
+  }
+
+  const text = parts.join('. ');
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'de-DE';
+  utt.rate = 0.85;
+  utt.onend = () => { wrSpeaking = false; };
+  wrSpeaking = true;
+  window.speechSynthesis.speak(utt);
+}
+
+function wrScheduleNext() {
+  if (wrTimer) clearTimeout(wrTimer);
+  wrTimer = setTimeout(() => {
+    if (!wrPlaying) return;
+    if (wrIdx >= wrWords.length - 1) {
+      // Liste bitti
+      wrPlaying = false;
+      document.getElementById('wr-status').textContent = 'Liste tamamlandı ✓';
+      document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-play"></i> Tekrar';
+      document.getElementById('wr-play-btn').onclick = () => { wrIdx=0; wrPlaying=true; wrShowWord(); wrScheduleNext(); document.getElementById('wr-play-btn').innerHTML='<i class="ti ti-player-pause"></i> Pause'; document.getElementById('wr-play-btn').onclick=wrToggle; };
+      return;
+    }
+    wrIdx++;
+    wrShowWord();
+    wrScheduleNext();
+  }, 3000);
+}
+
+window.wrToggle = function() {
+  wrPlaying = !wrPlaying;
+  const btn = document.getElementById('wr-play-btn');
+  if (wrPlaying) {
+    btn.innerHTML = '<i class="ti ti-player-pause"></i> Pause';
+    document.getElementById('wr-status').textContent = 'Liest vor...';
+    wrShowWord();
+    wrScheduleNext();
+  } else {
+    btn.innerHTML = '<i class="ti ti-player-play"></i> Weiter';
+    document.getElementById('wr-status').textContent = 'Pausiert';
+    window.speechSynthesis.cancel();
+    if (wrTimer) clearTimeout(wrTimer);
+  }
+};
+
+window.wrGo = function(dir) {
+  window.speechSynthesis.cancel();
+  if (wrTimer) clearTimeout(wrTimer);
+  wrIdx = Math.max(0, Math.min(wrWords.length-1, wrIdx+dir));
+  wrShowWord();
+  if (wrPlaying) wrScheduleNext();
+};
+
+window.stopWordReader = function() {
+  wrPlaying = false;
+  if (wrTimer) clearTimeout(wrTimer);
+  window.speechSynthesis.cancel();
+};
+
 window.removeFromList = async function(wordId) {
   if (!_currentListId) return;
   await azureCall({ action: 'removeFromList', listId: _currentListId, wordId });
@@ -2049,12 +2207,45 @@ textarea{resize:vertical;min-height:54px}
   <div class="topbar">
     <button class="btn sm" onclick="go('s-wordlists')"><i class="ti ti-arrow-left"></i></button>
     <h1 id="wld-title">Liste</h1>
-    <button class="btn sm" style="color:var(--danger)" onclick="deleteCurrentList()"><i class="ti ti-trash"></i></button>
+    <div style="display:flex;gap:6px">
+      <button class="btn sm" onclick="startWordReader()" title="Vorlesen"><i class="ti ti-volume"></i></button>
+      <button class="btn sm" style="color:var(--danger)" onclick="deleteCurrentList()"><i class="ti ti-trash"></i></button>
+    </div>
   </div>
   <div id="wld-words" style="display:flex;flex-direction:column;gap:6px;padding:4px 0"></div>
   <div id="wld-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:2rem;font-size:14px">
     Diese Liste ist leer.<br>Füge Wörter über die Wortliste hinzu.
   </div>
+</div>
+
+<!-- KELİME OKUYUCU -->
+<div id="s-word-reader" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="stopWordReader();go('s-wordlist-detail')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Wörter lesen</h1>
+  </div>
+  <!-- İlerleme -->
+  <div style="text-align:center;font-size:13px;color:var(--txt2);margin-bottom:8px" id="wr-progress">1 / 10</div>
+  <div style="height:4px;background:var(--bg2);border-radius:99px;margin-bottom:16px;overflow:hidden">
+    <div id="wr-bar" style="height:100%;background:var(--ac);border-radius:99px;transition:width 0.3s;width:0%"></div>
+  </div>
+  <!-- Kelime kartı -->
+  <div style="background:var(--bg2);border-radius:16px;padding:24px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center">
+    <div style="font-size:12px;font-weight:600;color:var(--ac);text-transform:uppercase;letter-spacing:1px" id="wr-type"></div>
+    <div style="font-size:28px;font-weight:700;color:var(--txt)" id="wr-word"></div>
+    <div style="font-size:18px;color:var(--txt2)" id="wr-word2"></div>
+    <div style="width:100%;height:1px;background:var(--brd)"></div>
+    <div style="font-size:16px;color:var(--txt3)" id="wr-tr"></div>
+    <!-- Fiil çekimleri -->
+    <div id="wr-conjugation" style="display:none;width:100%;text-align:left;font-size:14px;color:var(--txt2);line-height:2"></div>
+  </div>
+  <!-- Kontroller -->
+  <div style="display:flex;gap:12px;margin-top:16px;justify-content:center">
+    <button class="btn" id="wr-prev-btn" onclick="wrGo(-1)"><i class="ti ti-chevron-left"></i> Zurück</button>
+    <button class="btn pri" id="wr-play-btn" onclick="wrToggle()"><i class="ti ti-player-pause"></i> Pause</button>
+    <button class="btn" id="wr-next-btn" onclick="wrGo(1)">Weiter <i class="ti ti-chevron-right"></i></button>
+  </div>
+  <div style="text-align:center;margin-top:12px;font-size:13px;color:var(--txt3)" id="wr-status">Liest vor...</div>
 </div>
 
 <!-- MASTER İÇE AKTARMA -->
