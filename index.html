@@ -782,6 +782,8 @@ let wrIdx = 0;
 let wrPlaying = false;
 let wrTimer = null;
 let wrSpeaking = false;
+let wrBackScreen = 's-home';
+window.wrBackScreen = wrBackScreen;
 
 window.openWordReaderSetup = async function() {
   // Listeler yüklü değilse önce yükle
@@ -861,6 +863,8 @@ window.startWordReader = function() {
   wrWords = items;
   wrIdx = 0;
   wrPlaying = true;
+  wrBackScreen = document.querySelector('.scr.active')?.id || 's-home';
+  window.wrBackScreen = wrBackScreen;
   go('s-word-reader');
   document.getElementById('wr-status').textContent = 'Liest vor...';
   document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-pause"></i> Pause';
@@ -944,9 +948,11 @@ function wrSpeak(w) {
   }
 
   const text = parts.join('. ');
+  const speedEl = document.getElementById('wr-speed');
+  const rate = speedEl ? parseFloat(speedEl.value) : 0.85;
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = 'de-DE';
-  utt.rate = 0.85;
+  utt.rate = rate;
   utt.onend = () => { wrSpeaking = false; };
   wrSpeaking = true;
   window.speechSynthesis.speak(utt);
@@ -958,11 +964,17 @@ function wrScheduleNext() {
     if (!wrPlaying) {
       // pause
     } else if (wrIdx >= wrWords.length - 1) {
-      // Liste bitti
+      // Liste bitti — ekranda kal
       wrPlaying = false;
       document.getElementById('wr-status').textContent = 'Liste tamamlandı ✓';
       document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-play"></i> Tekrar';
-      document.getElementById('wr-play-btn').onclick = () => { wrIdx=0; wrPlaying=true; wrShowWord(); wrScheduleNext(); document.getElementById('wr-play-btn').innerHTML='<i class="ti ti-player-pause"></i> Pause'; document.getElementById('wr-play-btn').onclick=wrToggle; };
+      document.getElementById('wr-play-btn').onclick = () => {
+        wrIdx=0; wrPlaying=true;
+        wrShowWord(); wrScheduleNext();
+        document.getElementById('wr-play-btn').innerHTML='<i class="ti ti-player-pause"></i> Pause';
+        document.getElementById('wr-play-btn').onclick=wrToggle;
+        document.getElementById('wr-status').textContent='Liest vor...';
+      };
     } else {
       wrIdx++;
       wrShowWord();
@@ -2294,8 +2306,13 @@ textarea{resize:vertical;min-height:54px}
 <!-- KELİME OKUYUCU -->
 <div id="s-word-reader" class="scr">
   <div class="topbar">
-    <button class="btn sm" onclick="stopWordReader();go('s-wordlist-detail')"><i class="ti ti-arrow-left"></i></button>
+    <button class="btn sm" onclick="stopWordReader();go(wrBackScreen||'s-home')"><i class="ti ti-arrow-left"></i></button>
     <h1>Wörter lesen</h1>
+    <select id="wr-speed" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--brd);background:var(--bg2);color:var(--txt)">
+      <option value="0.6">Langsam</option>
+      <option value="0.85" selected>Normal</option>
+      <option value="1.1">Schnell</option>
+    </select>
   </div>
   <!-- İlerleme -->
   <div style="text-align:center;font-size:13px;color:var(--txt2);margin-bottom:8px" id="wr-progress">1 / 10</div>
