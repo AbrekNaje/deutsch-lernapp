@@ -869,7 +869,6 @@ window.startWordReader = function() {
   document.getElementById('wr-status').textContent = 'Liest vor...';
   document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-pause"></i> Pause';
   wrShowWord();
-  wrScheduleNext();
 };
 
 function wrShowWord() {
@@ -953,7 +952,30 @@ function wrSpeak(w) {
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = 'de-DE';
   utt.rate = rate;
-  utt.onend = () => { wrSpeaking = false; };
+  utt.onend = () => {
+    wrSpeaking = false;
+    // Okuma bitince 3 saniye bekle sonra geçici
+    if (wrPlaying) {
+      wrTimer = setTimeout(() => {
+        if (!wrPlaying) return;
+        if (wrIdx >= wrWords.length - 1) {
+          wrPlaying = false;
+          document.getElementById('wr-status').textContent = 'Liste tamamlandı ✓';
+          document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-play"></i> Tekrar';
+          document.getElementById('wr-play-btn').onclick = () => {
+            wrIdx=0; wrPlaying=true;
+            wrShowWord();
+            document.getElementById('wr-play-btn').innerHTML='<i class="ti ti-player-pause"></i> Pause';
+            document.getElementById('wr-play-btn').onclick=wrToggle;
+            document.getElementById('wr-status').textContent='Liest vor...';
+          };
+        } else {
+          wrIdx++;
+          wrShowWord();
+        }
+      }, 3000);
+    }
+  };
   wrSpeaking = true;
   window.speechSynthesis.speak(utt);
 }
@@ -989,8 +1011,8 @@ window.wrToggle = function() {
   if (wrPlaying) {
     btn.innerHTML = '<i class="ti ti-player-pause"></i> Pause';
     document.getElementById('wr-status').textContent = 'Liest vor...';
+    window.speechSynthesis.cancel();
     wrShowWord();
-    wrScheduleNext();
   } else {
     btn.innerHTML = '<i class="ti ti-player-play"></i> Weiter';
     document.getElementById('wr-status').textContent = 'Pausiert';
@@ -1004,7 +1026,6 @@ window.wrGo = function(dir) {
   if (wrTimer) clearTimeout(wrTimer);
   wrIdx = Math.max(0, Math.min(wrWords.length-1, wrIdx+dir));
   wrShowWord();
-  if (wrPlaying) wrScheduleNext();
 };
 
 window.stopWordReader = function() {
@@ -2306,13 +2327,8 @@ textarea{resize:vertical;min-height:54px}
 <!-- KELİME OKUYUCU -->
 <div id="s-word-reader" class="scr">
   <div class="topbar">
-    <button class="btn sm" onclick="stopWordReader();go(wrBackScreen||'s-home')"><i class="ti ti-arrow-left"></i></button>
+    <button class="btn sm" onclick="stopWordReader();go(window.wrBackScreen||'s-home')"><i class="ti ti-arrow-left"></i></button>
     <h1>Wörter lesen</h1>
-    <select id="wr-speed" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--brd);background:var(--bg2);color:var(--txt)">
-      <option value="0.6">Langsam</option>
-      <option value="0.85" selected>Normal</option>
-      <option value="1.1">Schnell</option>
-    </select>
   </div>
   <!-- İlerleme -->
   <div style="text-align:center;font-size:13px;color:var(--txt2);margin-bottom:8px" id="wr-progress">1 / 10</div>
@@ -2335,7 +2351,16 @@ textarea{resize:vertical;min-height:54px}
     <button class="btn pri" id="wr-play-btn" onclick="wrToggle()"><i class="ti ti-player-pause"></i> Pause</button>
     <button class="btn" id="wr-next-btn" onclick="wrGo(1)">Weiter <i class="ti ti-chevron-right"></i></button>
   </div>
-  <div style="text-align:center;margin-top:12px;font-size:13px;color:var(--txt3)" id="wr-status">Liest vor...</div>
+  <!-- Hız seçici -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px">
+    <span style="font-size:13px;color:var(--txt2)">Tempo:</span>
+    <select id="wr-speed" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--brd);background:var(--bg2);color:var(--txt)">
+      <option value="0.6">Langsam</option>
+      <option value="0.85" selected>Normal</option>
+      <option value="1.1">Schnell</option>
+    </select>
+  </div>
+  <div style="text-align:center;margin-top:8px;font-size:13px;color:var(--txt3)" id="wr-status">Liest vor...</div>
 </div>
 
 <!-- MASTER İÇE AKTARMA -->
