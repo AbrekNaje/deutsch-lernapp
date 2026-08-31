@@ -923,39 +923,42 @@ function wrShowWord() {
 
 function wrSpeak(w) {
   window.speechSynthesis.cancel();
+  if (wrTimer) clearTimeout(wrTimer);
+
+  // Her parça: {text, lang}
   const parts = [];
 
   if (w.type === 'noun') {
-    parts.push(w.word);
-    if (w.plural) parts.push(`Plural: ${w.plural}`);
-    if (w.tr) parts.push(w.tr);
+    parts.push({ text: w.word, lang: 'de-DE' });
+    if (w.plural) parts.push({ text: `Plural: ${w.plural}`, lang: 'de-DE' });
+    if (w.tr) parts.push({ text: w.tr, lang: 'tr-TR' });
   } else if (w.type === 'verb') {
-    parts.push(w.word);
+    parts.push({ text: w.word, lang: 'de-DE' });
     const p = w.praesens || {};
-    if (p.ich) parts.push(`ich ${p.ich}`);
-    if (p.du)  parts.push(`du ${p.du}`);
-    if (p.er)  parts.push(`er ${p.er}`);
-    if (p.wir) parts.push(`wir ${p.wir}`);
-    if (p.ihr) parts.push(`ihr ${p.ihr}`);
-    if (p.sie) parts.push(`sie ${p.sie}`);
-    if (w.perfekt) parts.push(`Perfekt: ${w.perfekt}`);
-    if (w.praeteritum) parts.push(`Präteritum: ${w.praeteritum}`);
-    if (w.tr) parts.push(w.tr);
+    if (p.ich) parts.push({ text: `ich ${p.ich}`, lang: 'de-DE' });
+    if (p.du)  parts.push({ text: `du ${p.du}`, lang: 'de-DE' });
+    if (p.er)  parts.push({ text: `er ${p.er}`, lang: 'de-DE' });
+    if (p.wir) parts.push({ text: `wir ${p.wir}`, lang: 'de-DE' });
+    if (p.ihr) parts.push({ text: `ihr ${p.ihr}`, lang: 'de-DE' });
+    if (p.sie) parts.push({ text: `sie ${p.sie}`, lang: 'de-DE' });
+    if (w.perfekt) parts.push({ text: `Perfekt: ${w.perfekt}`, lang: 'de-DE' });
+    if (w.praeteritum) parts.push({ text: `Präteritum: ${w.praeteritum}`, lang: 'de-DE' });
+    if (w.tr) parts.push({ text: w.tr, lang: 'tr-TR' });
   } else {
-    parts.push(w.word);
-    if (w.tr) parts.push(w.tr);
+    parts.push({ text: w.word, lang: 'de-DE' });
+    if (w.tr) parts.push({ text: w.tr, lang: 'tr-TR' });
   }
 
-  const text = parts.join('. ');
   const speedEl = document.getElementById('wr-speed');
   const rate = speedEl ? parseFloat(speedEl.value) : 0.85;
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'de-DE';
-  utt.rate = rate;
-  utt.onend = () => {
-    wrSpeaking = false;
-    // Okuma bitince 3 saniye bekle sonra geçici
-    if (wrPlaying) {
+
+  // Parçaları sırayla oku — her birinin arasında 3 sn bekle
+  let partIdx = 0;
+
+  function speakNext() {
+    if (!wrPlaying) return;
+    if (partIdx >= parts.length) {
+      // Tüm parçalar bitti — 3 sn bekle sonra sonraki kelime
       wrTimer = setTimeout(() => {
         if (!wrPlaying) return;
         if (wrIdx >= wrWords.length - 1) {
@@ -974,35 +977,26 @@ function wrSpeak(w) {
           wrShowWord();
         }
       }, 3000);
+      return;
     }
-  };
-  wrSpeaking = true;
-  window.speechSynthesis.speak(utt);
-}
 
-function wrScheduleNext() {
-  if (wrTimer) clearTimeout(wrTimer);
-  wrTimer = setTimeout(() => {
-    if (!wrPlaying) {
-      // pause
-    } else if (wrIdx >= wrWords.length - 1) {
-      // Liste bitti — ekranda kal
-      wrPlaying = false;
-      document.getElementById('wr-status').textContent = 'Liste tamamlandı ✓';
-      document.getElementById('wr-play-btn').innerHTML = '<i class="ti ti-player-play"></i> Tekrar';
-      document.getElementById('wr-play-btn').onclick = () => {
-        wrIdx=0; wrPlaying=true;
-        wrShowWord(); wrScheduleNext();
-        document.getElementById('wr-play-btn').innerHTML='<i class="ti ti-player-pause"></i> Pause';
-        document.getElementById('wr-play-btn').onclick=wrToggle;
-        document.getElementById('wr-status').textContent='Liest vor...';
-      };
-    } else {
-      wrIdx++;
-      wrShowWord();
-      wrScheduleNext();
-    }
-  }, 3000);
+    const part = parts[partIdx];
+    partIdx++;
+    const utt = new SpeechSynthesisUtterance(part.text);
+    utt.lang = part.lang;
+    utt.rate = rate;
+    utt.onend = () => {
+      wrSpeaking = false;
+      // Parçalar arası 3 sn bekle
+      wrTimer = setTimeout(() => {
+        if (wrPlaying) speakNext();
+      }, 3000);
+    };
+    wrSpeaking = true;
+    window.speechSynthesis.speak(utt);
+  }
+
+  speakNext();
 }
 
 window.wrToggle = function() {
