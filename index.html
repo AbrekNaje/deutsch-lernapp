@@ -854,6 +854,157 @@ window.selectListForReader = async function(listId, listName, modal) {
   }
 };
 
+// =============================================
+// ARTIKEL SPIEL
+// =============================================
+let agDeck = [];
+let agIdx = 0;
+let agCorrect = 0;
+let agWrong = 0;
+
+// Genus → artikel tablosu
+const ARTIKEL = {
+  best:   { m:'der',  f:'die',  n:'das',  label:'Bestimmter Artikel (der / die / das)' },
+  unbest: { m:'ein',  f:'eine', n:'ein',  label:'Unbestimmter Artikel (ein / eine / ein)' },
+  neg:    { m:'kein', f:'keine',n:'kein', label:'Negationsartikel (kein / keine / kein)' },
+  dativ:  { m:'dem',  f:'der',  n:'dem',  label:'Dativ (dem / der / dem)' },
+  akk:    { m:'den',  f:'die',  n:'das',  label:'Akkusativ (den / die / das)' },
+};
+
+// Kelimeden genus tespit et (word = "der Hund", "die Katze", "das Auto")
+function getGenus(word) {
+  const w = (word || '').toLowerCase().trim();
+  if (w.startsWith('die ')) return 'f';
+  if (w.startsWith('das ')) return 'n';
+  if (w.startsWith('der ')) return 'm';
+  return null;
+}
+
+window.artikelFilterUpdate = function() {
+  const lv = document.getElementById('as-level').value;
+  const ch = document.getElementById('as-chapter').value;
+  const nouns = (window._words || []).filter(w => w.type === 'noun' && getGenus(w.word));
+  const filtered = nouns.filter(w =>
+    (lv === 'all' || w.level === lv) &&
+    (ch === 'all' || w.chapter === ch)
+  );
+  const el = document.getElementById('as-preview');
+  if (el) el.textContent = filtered.length + ' Nomen verfügbar';
+};
+
+window.openArtikelSetup = function() {
+  // Seviyeleri ve bölümleri doldur
+  const nouns = (window._words || []).filter(w => w.type === 'noun' && getGenus(w.word));
+  const levels = [...new Set(nouns.map(w => w.level).filter(Boolean))].sort();
+  const chapters = [...new Set(nouns.map(w => w.chapter).filter(Boolean))].sort((a,b) => {
+    const na = String(a).match(/\d+/), nb = String(b).match(/\d+/);
+    return na && nb ? Number(na[0]) - Number(nb[0]) : String(a).localeCompare(String(b));
+  });
+  const lvSel = document.getElementById('as-level');
+  const chSel = document.getElementById('as-chapter');
+  lvSel.innerHTML = '<option value="all">Alle</option>' + levels.map(l => `<option value="${l}">${l}</option>`).join('');
+  chSel.innerHTML = '<option value="all">Alle</option>' + chapters.map(c => `<option value="${c}">${c}</option>`).join('');
+  window.artikelFilterUpdate();
+  go('s-artikel-setup');
+};
+
+window.startArtikelSpiel = function() {
+  const lv = document.getElementById('as-level').value;
+  const ch = document.getElementById('as-chapter').value;
+  const type = document.getElementById('as-type').value;
+  const countVal = document.getElementById('as-count').value;
+
+  const nouns = (window._words || []).filter(w =>
+    w.type === 'noun' && getGenus(w.word) &&
+    (lv === 'all' || w.level === lv) &&
+    (ch === 'all' || w.chapter === ch)
+  );
+
+  if (!nouns.length) { toast('Keine Nomen für diesen Filter!'); return; }
+
+  const shuffled = [...nouns].sort(() => Math.random() - 0.5);
+  agDeck = countVal === 'all' ? shuffled : shuffled.slice(0, parseInt(countVal));
+  agIdx = 0; agCorrect = 0; agWrong = 0;
+
+  // Tür etiketini göster
+  document.getElementById('ag-type-label').textContent = ARTIKEL[type]?.label || '';
+
+  go('s-artikel-spiel');
+  showArtikelCard();
+};
+
+function showArtikelCard() {
+  const w = agDeck[agIdx];
+  if (!w) return;
+  const type = document.getElementById('as-type').value;
+  const art = ARTIKEL[type];
+  const genus = getGenus(w.word);
+  // Artikeli kelimeden çıkar — sadece isim kalsın
+  const wordOnly = w.word.replace(/^(der|die|das)\s+/i, '');
+
+  // İlerleme
+  document.getElementById('ag-ctr').textContent = `${agIdx + 1}/${agDeck.length}`;
+  document.getElementById('ag-bar').style.width = `${((agIdx + 1) / agDeck.length) * 100}%`;
+  document.getElementById('ag-word').textContent = wordOnly;
+  document.getElementById('ag-tr').textContent = w.tr || '';
+  document.getElementById('ag-feedback').style.display = 'none';
+
+  // Doğru cevap
+  const correct = art[genus];
+
+  // Şıklar — 3 farklı değer (m, f, n için art değerleri)
+  const opts = [...new Set([art.m, art.f, art.n])].sort(() => Math.random() - 0.5);
+
+  const optEl = document.getElementById('ag-options');
+  optEl.innerHTML = opts.map((opt, i) => `
+    <button onclick="checkArtikel('${opt}','${correct}')"
+      style="padding:14px;border-radius:12px;background:var(--bg2);border:2px solid var(--brd);
+             font-size:18px;font-weight:600;color:var(--txt);cursor:pointer;transition:all 0.15s"
+      id="ag-opt-${i}">
+      ${String.fromCharCode(97 + i)}) ${opt}
+    </button>`).join('');
+}
+
+window.checkArtikel = function(chosen, correct) {
+  const isCorrect = chosen === correct;
+  if (isCorrect) agCorrect++; else agWrong++;
+
+  // Butonları renklendir
+  const btns = document.querySelectorAll('#ag-options button');
+  btns.forEach(btn => {
+    btn.disabled = true;
+    const val = btn.textContent.trim().replace(/^[a-c]\)\s*/, '');
+    if (val === correct) btn.style.background = '#e8f5e9';
+    else if (val === chosen && !isCorrect) btn.style.background = '#ffebee';
+  });
+
+  // Feedback
+  const fb = document.getElementById('ag-feedback');
+  fb.style.display = 'block';
+  fb.style.background = isCorrect ? '#e8f5e9' : '#ffebee';
+  fb.style.color = isCorrect ? '#2e7d32' : '#c62828';
+  fb.textContent = isCorrect ? '✓ Richtig!' : `✗ Falsch! Die richtige Antwort: ${correct}`;
+
+  // 1.5 sn sonra sonraki kelimeye
+  setTimeout(() => {
+    agIdx++;
+    if (agIdx >= agDeck.length) {
+      showArtikelResult();
+    } else {
+      showArtikelCard();
+    }
+  }, 1500);
+};
+
+function showArtikelResult() {
+  const total = agDeck.length;
+  const score = Math.round((agCorrect / total) * 100);
+  document.getElementById('ag-score').textContent = score;
+  document.getElementById('ag-correct').textContent = agCorrect;
+  document.getElementById('ag-wrong').textContent = agWrong;
+  go('s-artikel-result');
+}
+
 window.startWordReader = function() {
   const items = (window._words||[]).filter(w =>
     window._listItems && window._listItems[_currentListId] &&
@@ -2259,6 +2410,10 @@ textarea{resize:vertical;min-height:54px}
   <div class="grid3">
     <button class="ncard" onclick="openWordReaderSetup()" style="grid-column:1/-1"><i class="ti ti-volume" style="color:#B7534A"></i><div class="nt">Wortliste vorlesen</div></button>
   </div>
+  <div style="font-size:15px;font-weight:500;color:var(--txt2)">Artikel Spiel 🎯</div>
+  <div class="grid3">
+    <button class="ncard" onclick="openArtikelSetup()" style="grid-column:1/-1"><i class="ti ti-article" style="color:#2196F3"></i><div class="nt">Der / Die / Das</div></button>
+  </div>
   <button class="btn" onclick="loadWords()" style="font-size:15px"><i class="ti ti-refresh"></i> Aktualisieren</button>
 </div>
 
@@ -2361,6 +2516,89 @@ textarea{resize:vertical;min-height:54px}
     </select>
   </div>
   <div style="text-align:center;margin-top:8px;font-size:13px;color:var(--txt3)" id="wr-status">Liest vor...</div>
+</div>
+
+<!-- ARTIKEL SPIEL SETUP -->
+<div id="s-artikel-setup" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Artikel Spiel</h1>
+  </div>
+  <div class="step-box">
+    <div style="font-size:14px;font-weight:500;color:var(--txt);margin-bottom:10px"><i class="ti ti-filter" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Filter</div>
+    <span class="lbl">Niveau</span>
+    <select id="as-level" onchange="artikelFilterUpdate()">
+      <option value="all">Alle</option>
+    </select>
+    <span class="lbl" style="margin-top:8px">Kapitel</span>
+    <select id="as-chapter" onchange="artikelFilterUpdate()">
+      <option value="all">Alle</option>
+    </select>
+    <span class="lbl" style="margin-top:8px">Artikel-Typ</span>
+    <select id="as-type">
+      <option value="best">Bestimmter Artikel (der/die/das)</option>
+      <option value="unbest">Unbestimmter Artikel (ein/eine/ein)</option>
+      <option value="neg">Negationsartikel (kein/keine/kein)</option>
+      <option value="dativ">Dativ (dem/der/dem)</option>
+      <option value="akk">Akkusativ (den/die/das)</option>
+    </select>
+    <span class="lbl" style="margin-top:8px">Anzahl der Wörter</span>
+    <select id="as-count">
+      <option value="20" selected>20 Wörter</option>
+      <option value="40">40 Wörter</option>
+      <option value="60">60 Wörter</option>
+      <option value="all">Alle Wörter</option>
+    </select>
+    <div style="font-size:13px;color:var(--txt2);margin-top:8px" id="as-preview">–</div>
+  </div>
+  <button class="btn pri" onclick="startArtikelSpiel()"><i class="ti ti-player-play"></i> Spiel starten</button>
+</div>
+
+<!-- ARTIKEL SPIEL -->
+<div id="s-artikel-spiel" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-artikel-setup')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Artikel Spiel</h1>
+    <span class="badge" id="ag-ctr">1/20</span>
+  </div>
+  <!-- İlerleme -->
+  <div style="height:4px;background:var(--bg2);border-radius:99px;margin-bottom:16px;overflow:hidden">
+    <div id="ag-bar" style="height:100%;background:var(--ac);border-radius:99px;transition:width 0.3s;width:0%"></div>
+  </div>
+  <!-- Kelime kartı -->
+  <div style="background:var(--bg2);border-radius:16px;padding:28px;text-align:center;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px" id="ag-type-label">Bestimmter Artikel</div>
+    <div style="font-size:32px;font-weight:700;color:var(--txt)" id="ag-word"></div>
+    <div style="font-size:14px;color:var(--txt2);margin-top:6px" id="ag-tr"></div>
+  </div>
+  <!-- Şıklar -->
+  <div style="display:flex;flex-direction:column;gap:10px" id="ag-options"></div>
+  <!-- Feedback -->
+  <div id="ag-feedback" style="display:none;text-align:center;padding:12px;border-radius:12px;margin-top:12px;font-size:15px;font-weight:600"></div>
+</div>
+
+<!-- ARTIKEL SPIEL SONUÇ -->
+<div id="s-artikel-result" class="scr">
+  <div class="topbar">
+    <button class="btn sm" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <h1>Ergebnis</h1>
+  </div>
+  <div style="text-align:center;padding:32px 16px">
+    <div style="font-size:64px;font-weight:800;color:var(--ac)" id="ag-score">0</div>
+    <div style="font-size:16px;color:var(--txt2);margin-bottom:24px">Punkte von 100</div>
+    <div style="display:flex;justify-content:center;gap:24px;margin-bottom:32px">
+      <div style="text-align:center">
+        <div style="font-size:28px;font-weight:700;color:#4caf50" id="ag-correct">0</div>
+        <div style="font-size:13px;color:var(--txt2)">Richtig ✓</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:28px;font-weight:700;color:#f44336" id="ag-wrong">0</div>
+        <div style="font-size:13px;color:var(--txt2)">Falsch ✗</div>
+      </div>
+    </div>
+    <button class="btn pri" onclick="startArtikelSpiel()" style="margin-bottom:10px;width:100%"><i class="ti ti-refresh"></i> Nochmal spielen</button>
+    <button class="btn" onclick="go('s-artikel-setup')" style="width:100%"><i class="ti ti-settings"></i> Filter ändern</button>
+  </div>
 </div>
 
 <!-- MASTER İÇE AKTARMA -->
