@@ -3271,7 +3271,7 @@ const PRONOUNS=[{id:'ich',lbl:'ich'},{id:'du',lbl:'du'},{id:'er',lbl:'er/sie/es'
 const TENSES=[{id:'mastar',lbl:'Infinitiv'},{id:'praesens',lbl:'Präsens'},{id:'perfekt',lbl:'Perfekt'},{id:'praeteritum',lbl:'Präteritum'},{id:'futur1',lbl:'Futur I'},{id:'futur2',lbl:'Futur II'},{id:'plusquam',lbl:'Plusquamperf.'}];
 
 let addGrp='noun', listGrp='noun';
-let flDeck=[],flIdx=0,flFlipped=false,flWord='',flGrp='',flShowSentences=false;
+let flDeck=[],flIdx=0,flFlipped=false,flWord='',flGrp='',flShowSentences=false,flFlashCorr=0,flFlashWrong=[];
 let mGrp='',mDir='de-tr',mTense='mastar',mPron='ich',mDeck=[],mIdx=0,mCorr=0,mWrong=[],mtSpk='',mShowSentences=false;
 let wGrp='',wTense='praesens',wPron='ich',wProns=['ich','du','er','wir','ihr','sie'],wDeck=[],wIdx=0,wStep=0,wCorr=0,wWrong=[],wAnswered=false,wShowSentences=false;
 
@@ -3655,7 +3655,7 @@ function clearForm(){['n-w','n-pl','n-tr','v-w','v-tr','v-p1','v-p2','v-p3','v-p
 
 // FLASHCARD
 function startFlash(grp){flGrp=grp;document.getElementById('fs-title').textContent=grp==='noun'?'Nomen – Lernkarten':grp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';fillLevels('ff-level',grpPool(grp));document.getElementById('ff-chapter').innerHTML='<option value="">Alle</option>';updateFChapters();if(window.fillListSelects)window.fillListSelects();go('s-fsetup');}
-function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);const flLimit=document.getElementById('ff-count-sel').value;flDeck=(flLimit==='all'?scored:scored.slice(0,parseInt(flLimit))).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
+function beginFlash(){const lv=document.getElementById('ff-level').value;const ch=document.getElementById('ff-chapter').value;const listId=document.getElementById('ff-list').value;let pool;if(listId&&window._listItems&&window._listItems[listId]){const items=window._listItems[listId];pool=(window._words||[]).filter(w=>items.some(i=>i.WordId===w._id)&&(flGrp==='noun'?w.type==='noun':flGrp==='verb'?w.type==='verb':(w.type==='adj'||w.type==='pron')));}else{pool=applyFilter(grpPool(flGrp),lv,ch);}if(!pool.length){alert('Keine Wörter für diesen Filter!');return;}const scored=pool.map(w=>({w,score:((w.wrong||0)*2)+((w.streak||0)>=3?0:1)+Math.random()*0.5}));scored.sort((a,b)=>b.score-a.score);const flLimit=document.getElementById('ff-count-sel').value;flDeck=(flLimit==='all'?scored:scored.slice(0,parseInt(flLimit))).map(s=>s.w).sort(()=>Math.random()-.5);flIdx=0;flFlashCorr=0;flFlashWrong=[];flShowSentences=document.getElementById('ff-sentences').checked;document.getElementById('fl-title').textContent=flGrp==='noun'?'Nomen – Lernkarten':flGrp==='verb'?'Verben – Lernkarten':'Adjektiv – Lernkarten';go('s-flash');showFlash();}
 function showFlash(){const w=flDeck[flIdx];flFlipped=false;flWord=w.word;document.getElementById('fl-ctr').textContent=(flIdx+1)+'/'+flDeck.length;document.getElementById('fl-prog').style.width=(flIdx/flDeck.length*100)+'%';document.getElementById('fl-tag').textContent=w.level+(w.chapter?' · '+w.chapter:'');document.getElementById('fl-front').classList.remove('hidden');document.getElementById('fl-back').classList.add('hidden');document.getElementById('fl-rate').style.display='none';document.getElementById('fl-flip').classList.remove('hidden');const art=document.getElementById('fl-art');art.textContent='';art.style.color='';document.getElementById('fl-w').textContent=w.word;document.getElementById('fl-hint').textContent=w.type==='noun'&&w.plural?'Plural: '+w.plural:'Tippen zum Umdrehen';document.getElementById('fl-tr').textContent=w.tr;let ex='';if(w.type==='verb'){if(w.perfekt)ex='Perfekt: '+w.perfekt;if(w.praeteritum)ex+=(ex?'\n':'')+'Prät.: '+w.praeteritum;}if((w.type==='adj'||w.type==='pron')&&w.extra)ex=w.extra;document.getElementById('fl-ex').textContent=ex;if(window.updateFavBtn)window.updateFavBtn('fl-fav-btn',w._id);renderWordStats('fl-stats',w);}
 function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById('fl-front').classList.add('hidden');document.getElementById('fl-back').classList.remove('hidden');document.getElementById('fl-rate').style.display='flex';document.getElementById('fl-flip').classList.add('hidden');
   const w=flDeck[flIdx];
@@ -3710,7 +3710,25 @@ function flipFlash(){if(flFlipped)return;flFlipped=true;document.getElementById(
     document.getElementById('fl-sentences').classList.add('hidden');
   }
 }
-function rateFlash(ok){const w=flDeck[flIdx];const o=(window._words||[]).find(x=>x._id===w._id);if(ok){if(o){o.correct=(o.correct||0)+1;o.streak=(o.streak||0)+1;}flFlashCorr=(flFlashCorr||0)+1;}else{if(o){o.wrong=(o.wrong||0)+1;o.streak=0;}flFlashWrong=(flFlashWrong||[]);flFlashWrong.push(w);}if(o)updateStats(o);flIdx++;if(flIdx>=flDeck.length){updateHome();showResult(flFlashCorr||0,flDeck.length,flFlashWrong||[],()=>{flFlashCorr=0;flFlashWrong=[];beginFlash();},'flashcard',flGrp);flFlashCorr=0;flFlashWrong=[];}else showFlash();}
+function rateFlash(ok) {
+  const w = flDeck[flIdx];
+  const o = (window._words||[]).find(x => x._id === w._id);
+  if (ok) {
+    if (o) { o.correct = (o.correct||0)+1; o.streak = (o.streak||0)+1; }
+    flFlashCorr++;
+  } else {
+    if (o) { o.wrong = (o.wrong||0)+1; o.streak = 0; }
+    flFlashWrong.push(w);
+  }
+  if (o) updateStats(o);
+  flIdx++;
+  if (flIdx >= flDeck.length) {
+    updateHome();
+    showResult(flFlashCorr, flDeck.length, flFlashWrong, () => { beginFlash(); }, 'flashcard', flGrp);
+  } else {
+    showFlash();
+  }
+}
 
 // SEÇMELİ
 function buildTenses(cid,forWrite){const c=document.getElementById(cid);c.innerHTML='';const cur=forWrite?wTense:mTense;TENSES.forEach(t=>{const b=document.createElement('button');b.className='tense-btn'+(t.id===cur?' active':'');b.textContent=t.lbl;b.onclick=()=>{document.querySelectorAll('#'+cid+' .tense-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(forWrite)wTense=t.id;else mTense=t.id;updatePronVisibility(t.id,forWrite);if(!forWrite){const dir=document.getElementById('ms-verb-dir');if(dir){dir.classList.toggle('hidden',t.id!=='mastar');if(t.id==='mastar')setMDir(mDir);}}};c.appendChild(b);});
