@@ -3340,8 +3340,7 @@ async function switchProgram(programAdi) {
     if (res.success) {
       // Profili güncelle
       if (window._userProfile) window._userProfile.programAdi = programAdi;
-      userProfile.programAdi = programAdi;
-      try { localStorage.setItem('dl_profile_' + user.uid, JSON.stringify(userProfile)); } catch(e) {}
+      try { localStorage.setItem('dl_profile_' + user.uid, JSON.stringify(window._userProfile || {})); } catch(e) {}
       // Cache'i temizle — yeni program yüklensin
       localStorage.removeItem('dl_words_' + user.uid);
       localStorage.removeItem('dl_sync_' + user.uid);
