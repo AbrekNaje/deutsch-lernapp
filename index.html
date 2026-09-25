@@ -3318,13 +3318,16 @@ async function loadUserPrograms() {
     const list = document.getElementById('user-programs-list');
     const infoEl = document.getElementById('active-program-info');
     if (!list) return;
-    const active = res.programs.find(p => p.AktifMi);
+    const active = res.programs.find(p => p.AktifMi == 1 || p.AktifMi === true);
     if (infoEl && active) infoEl.textContent = 'Aktives Programm: ' + active.ProgramAdi;
-    list.innerHTML = res.programs.map(p => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${p.AktifMi?'var(--acl)':'var(--bg2)'}">
-        <span style="font-size:14px;font-weight:${p.AktifMi?600:400};color:${p.AktifMi?'var(--ac)':'var(--txt)'}">${p.ProgramAdi}${p.AktifMi?' ✓':''}</span>
-        ${!p.AktifMi ? `<button class="btn sm" onclick="switchProgram('${p.ProgramAdi}')">Aktivieren</button>` : ''}
-      </div>`).join('');
+    list.innerHTML = res.programs.map(p => {
+      const isActive = p.AktifMi == 1 || p.AktifMi === true;
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${isActive?'var(--acl)':'var(--bg2)'}">
+        <span style="font-size:14px;font-weight:${isActive?600:400};color:${isActive?'var(--ac)':'var(--txt)'}">${p.ProgramAdi}${isActive?' ✓':''}</span>
+        ${!isActive ? `<button class="btn sm" onclick="switchProgram('${p.ProgramAdi}')">Aktivieren</button>` : ''}
+      </div>`;
+    }).join('');
   } catch(e) {}
 }
 
