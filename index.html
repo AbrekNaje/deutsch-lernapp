@@ -1841,6 +1841,28 @@ function renderSentenceList(sentences){
   `).join('');
 }
 
+
+const SPK_MARKS='●○■□▪▫◆◇▲△★☆';
+const SPK_COLORS=['#2563eb','#dc2626','#16a34a','#d97706','#9333ea','#0891b2'];
+window.cleanSpeakerText=function(t){return (t||'').replace(new RegExp('['+SPK_MARKS+']\\s*','g'),'').replace(/\s*\n+\s*/g,' ').trim();};
+window.renderSpeakerText=function(el,text){
+  el.innerHTML='';
+  text=(text||'').replace(new RegExp('(?!^)\\s*(['+SPK_MARKS+'])','g'),'\n$1');
+  const map={};let n=0;
+  text.split(/\n+/).forEach(line=>{
+    line=line.trim(); if(!line)return;
+    const d=document.createElement('div'); d.style.margin='0 0 10px 0';
+    const m=line.charAt(0);
+    if(SPK_MARKS.indexOf(m)>=0){
+      if(!(m in map)) map[m]=SPK_COLORS[n++%SPK_COLORS.length];
+      const b=document.createElement('span');
+      b.textContent=m+' '; b.style.color=map[m]; b.style.fontWeight='700';
+      d.appendChild(b); d.appendChild(document.createTextNode(line.slice(1).trim()));
+    } else d.textContent=line;
+    el.appendChild(d);
+  });
+};
+
 window.startSentenceView = function(idx) {
   const s = (window._allTexts||[])[idx];
   if (!s) return;
@@ -1851,11 +1873,11 @@ window.startSentenceView = function(idx) {
     Ceviri: s.CeviriCumle || s.Turkce || ''
   };
   document.getElementById('tt-title').textContent = s.Bolum || 'Satz';
-  document.getElementById('tt-content').textContent = ttCurrentText.Icerik;
+  renderSpeakerText(document.getElementById('tt-content'), ttCurrentText.Icerik);
   // Türkçe çeviriyi göster
   const trEl = document.getElementById('tt-translation');
   if (trEl && ttCurrentText.Ceviri) {
-    trEl.textContent = ttCurrentText.Ceviri;
+    renderSpeakerText(trEl, ttCurrentText.Ceviri);
     trEl.style.display = 'block';
   }
   document.getElementById('tt-result').classList.add('hidden');
@@ -1874,11 +1896,11 @@ window.startTextTest = async function(id) {
     if (res.success) {
       ttCurrentText = res.text;
       document.getElementById('tt-title').textContent = res.text.Baslik;
-      document.getElementById('tt-content').textContent = res.text.Icerik;
+      renderSpeakerText(document.getElementById('tt-content'), res.text.Icerik);
       // Türkçe çeviri (varsa)
       const trEl = document.getElementById('tt-translation');
       if (trEl) {
-        if (res.text.CeviriIcerik) { trEl.textContent = res.text.CeviriIcerik; trEl.style.display='block'; }
+        if (res.text.CeviriIcerik) { renderSpeakerText(trEl, res.text.CeviriIcerik); trEl.style.display='block'; }
         else trEl.style.display='none';
       }
       document.getElementById('tt-result').classList.add('hidden');
@@ -1902,7 +1924,7 @@ window.startTextTest = async function(id) {
 window.ttSpeak = function(rate) {
   if(!ttCurrentText)return;
   window.speechSynthesis.cancel();
-  const utt=new SpeechSynthesisUtterance(ttCurrentText.Icerik);
+  const utt=new SpeechSynthesisUtterance(cleanSpeakerText(ttCurrentText.Icerik));
   utt.lang='de-DE';utt.rate=rate;
   window.speechSynthesis.speak(utt);
 };
@@ -1956,7 +1978,7 @@ async function analyzeTextPronunciation(){
     const wavBlob=new Blob([wavBuffer],{type:'audio/wav'});
 
     const pronunciationConfig=JSON.stringify({
-      ReferenceText:ttCurrentText.Icerik,
+      ReferenceText:cleanSpeakerText(ttCurrentText.Icerik),
       GradingSystem:'HundredMark',
       Granularity:'Word',
       EnableMiscue:true
@@ -3318,16 +3340,13 @@ async function loadUserPrograms() {
     const list = document.getElementById('user-programs-list');
     const infoEl = document.getElementById('active-program-info');
     if (!list) return;
-    const active = res.programs.find(p => p.AktifMi == 1 || p.AktifMi === true);
+    const active = res.programs.find(p => p.AktifMi);
     if (infoEl && active) infoEl.textContent = 'Aktives Programm: ' + active.ProgramAdi;
-    list.innerHTML = res.programs.map(p => {
-      const isActive = p.AktifMi == 1 || p.AktifMi === true;
-      return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${isActive?'var(--acl)':'var(--bg2)'}">
-        <span style="font-size:14px;font-weight:${isActive?600:400};color:${isActive?'var(--ac)':'var(--txt)'}">${p.ProgramAdi}${isActive?' ✓':''}</span>
-        ${!isActive ? `<button class="btn sm" onclick="switchProgram('${p.ProgramAdi}')">Aktivieren</button>` : ''}
-      </div>`;
-    }).join('');
+    list.innerHTML = res.programs.map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:${p.AktifMi?'var(--acl)':'var(--bg2)'}">
+        <span style="font-size:14px;font-weight:${p.AktifMi?600:400};color:${p.AktifMi?'var(--ac)':'var(--txt)'}">${p.ProgramAdi}${p.AktifMi?' ✓':''}</span>
+        ${!p.AktifMi ? `<button class="btn sm" onclick="switchProgram('${p.ProgramAdi}')">Aktivieren</button>` : ''}
+      </div>`).join('');
   } catch(e) {}
 }
 
@@ -3340,7 +3359,8 @@ async function switchProgram(programAdi) {
     if (res.success) {
       // Profili güncelle
       if (window._userProfile) window._userProfile.programAdi = programAdi;
-      try { localStorage.setItem('dl_profile_' + user.uid, JSON.stringify(window._userProfile || {})); } catch(e) {}
+      userProfile.programAdi = programAdi;
+      try { localStorage.setItem('dl_profile_' + user.uid, JSON.stringify(userProfile)); } catch(e) {}
       // Cache'i temizle — yeni program yüklensin
       localStorage.removeItem('dl_words_' + user.uid);
       localStorage.removeItem('dl_sync_' + user.uid);
