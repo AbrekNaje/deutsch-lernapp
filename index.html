@@ -1830,6 +1830,7 @@ function renderTextList(texts){
 function renderSentenceList(sentences){
   const el=document.getElementById('tf-list');
   const empty=document.getElementById('tf-empty');
+  window._shownSentences = sentences || [];
   if(!sentences.length){el.innerHTML='';empty.classList.remove('hidden');return;}
   empty.classList.add('hidden');
   el.innerHTML=sentences.map((s,i)=>`
@@ -1864,7 +1865,7 @@ window.renderSpeakerText=function(el,text){
 };
 
 window.startSentenceView = function(idx) {
-  const s = (window._allTexts||[])[idx];
+  const s = (window._shownSentences||window._allTexts||[])[idx];
   if (!s) return;
   // Metni texttest ekranında göster
   ttCurrentText = {
