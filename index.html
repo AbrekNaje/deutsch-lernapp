@@ -2271,6 +2271,18 @@ textarea{resize:vertical;min-height:54px}
   </div>
 </div>
 
+<div id="bulk-picker-overlay" class="loading-overlay" onclick="if(event.target===this)closeBulkPicker()">
+  <div class="loading-box" style="width:300px;max-width:88vw;align-items:stretch;text-align:left;padding:1.25rem">
+    <div style="font-size:16px;font-weight:500;color:var(--txt);margin-bottom:4px">Zur Liste hinzufügen</div>
+    <div id="bulk-info" style="font-size:13px;color:var(--txt2)"></div>
+    <div id="bulk-lists" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin:8px 0"></div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <input type="text" id="bulk-new-name" placeholder="Neue Liste..." style="flex:1">
+      <button class="btn pri sm" onclick="bulkCreateAndAdd()"><i class="ti ti-plus"></i></button>
+    </div>
+  </div>
+</div>
+
 <!-- KARŞILAMA EKRANI -->
 <div id="s-welcome" class="scr">
   <div class="auth-logo">
@@ -3210,6 +3222,14 @@ textarea{resize:vertical;min-height:54px}
     <select id="lf-ch" onchange="renderList()"><option value="">Alle Kapitel</option></select>
   </div>
   <label style="margin:8px 0"><input type="checkbox" id="lf-fav" onchange="renderList()"> Nur Favoriten <i class="ti ti-heart-filled" style="color:#E0457B;font-size:14px"></i></label>
+  <div style="display:flex;gap:8px;align-items:center;margin:4px 0 8px">
+    <button class="btn sm" id="bulk-toggle" onclick="toggleBulkMode()"><i class="ti ti-checkbox"></i> Auswählen</button>
+    <span id="bulk-bar" class="hidden" style="display:none;flex:1;align-items:center;gap:8px;justify-content:flex-end">
+      <button class="btn sm" onclick="bulkSelectAll()">Alle</button>
+      <button class="btn sm" onclick="bulkSelectNone()">Keine</button>
+      <button class="btn pri sm" onclick="openBulkPicker()"><i class="ti ti-heart"></i> <span id="bulk-count">0</span> → Liste</button>
+    </span>
+  </div>
   <div id="wlist"></div>
   <div id="list-empty" class="hidden" style="text-align:center;color:var(--txt2);padding:2rem;font-size:14px">Keine Wörter in dieser Gruppe.</div>
 </div>
@@ -3922,6 +3942,68 @@ function setListGrp(g,el){listGrp=g;document.querySelectorAll('#s-list .gtabs .g
 function updateLfChapters(){const pool=grpPool(listGrp);const lv=document.getElementById('lf-lv').value;const filtered=lv?pool.filter(w=>w.level===lv):pool;fillChapters('lf-ch',filtered);}
 let _lpWordId=null,_lpWordCol=null;
 
+// ---- Toplu favori / liste ekleme ----
+window._bulkMode=false; window._bulkSel=new Map(); window._bulkShown=[];
+function bulkUpdateUI(){
+  const bar=document.getElementById('bulk-bar');
+  bar.style.display=window._bulkMode?'flex':'none';
+  document.getElementById('bulk-count').textContent=window._bulkSel.size;
+  document.getElementById('bulk-toggle').innerHTML=window._bulkMode?'<i class="ti ti-x"></i> Fertig':'<i class="ti ti-checkbox"></i> Auswählen';
+}
+window.toggleBulkMode=function(){window._bulkMode=!window._bulkMode;if(!window._bulkMode)window._bulkSel.clear();bulkUpdateUI();renderList();};
+window.bulkToggle=function(id,col,on){if(on)window._bulkSel.set(id,col);else window._bulkSel.delete(id);bulkUpdateUI();};
+window.bulkSelectAll=function(){(window._bulkShown||[]).forEach(x=>window._bulkSel.set(x._id,x._col));bulkUpdateUI();renderList();};
+window.bulkSelectNone=function(){window._bulkSel.clear();bulkUpdateUI();renderList();};
+window.openBulkPicker=async function(){
+  if(!window._bulkSel.size){toast('Bitte zuerst Wörter auswählen',false);return;}
+  const user=window._currentUser;
+  if(!window._wordLists.length){
+    const res=await window._azureCall({action:'getLists',userId:user.uid});
+    if(res.success){window._wordLists.length=0;window._wordLists.push(...res.lists);}
+  }
+  document.getElementById('bulk-info').textContent=window._bulkSel.size+' Wörter ausgewählt';
+  document.getElementById('bulk-lists').innerHTML=window._wordLists.length?window._wordLists.map(l=>`<div onclick="bulkAddToList(${l.Id})" style="padding:10px;border-radius:var(--rad);border:.5px solid var(--brd);cursor:pointer;font-size:14px;color:var(--txt)">${l.ListName}</div>`).join(''):'<div style="font-size:13px;color:var(--txt2);text-align:center;padding:8px">Noch keine Listen. Erstelle eine neue!</div>';
+  document.getElementById('bulk-picker-overlay').classList.add('show');
+};
+window.closeBulkPicker=function(){document.getElementById('bulk-picker-overlay').classList.remove('show');};
+window.bulkAddToList=async function(listId){
+  closeBulkPicker();
+  await window.loadListItems(listId);
+  const have=new Set((window._listItems[listId]||[]).map(i=>String(i.WordId)));
+  const todo=[...window._bulkSel.entries()].filter(([id])=>!have.has(String(id)));
+  const skipped=window._bulkSel.size-todo.length;
+  let done=0,fail=0;
+  if(window.showLoading)showLoading('Wörter werden hinzugefügt...',10);
+  for(let i=0;i<todo.length;i+=5){
+    const chunk=todo.slice(i,i+5);
+    await Promise.all(chunk.map(async([id,col])=>{
+      try{
+        const r=await window._azureCall({action:'addToList',listId,wordId:id,wordCol:col});
+        if(r&&r.success===false)throw new Error('x');
+        if(!window._listItems[listId])window._listItems[listId]=[];
+        window._listItems[listId].push({WordId:id,WordCol:col});
+        done++;
+      }catch(e){fail++;}
+    }));
+    if(window.showLoading)showLoading('Wörter werden hinzugefügt... '+Math.min(i+5,todo.length)+'/'+todo.length,10+Math.round(90*Math.min(i+5,todo.length)/todo.length));
+  }
+  if(window.hideLoading)hideLoading();
+  const l=window._wordLists.find(x=>x.Id===listId);
+  toast(done+' hinzugefügt'+(skipped?', '+skipped+' schon in der Liste':'')+(fail?', '+fail+' Fehler':'')+(l?' → '+l.ListName:''),!fail);
+  window._bulkSel.clear();window._bulkMode=false;bulkUpdateUI();renderList();
+};
+window.bulkCreateAndAdd=async function(){
+  const name=document.getElementById('bulk-new-name').value.trim();
+  if(!name)return;
+  const res=await window._azureCall({action:'saveList',userId:window._currentUser.uid,listName:name});
+  if(res.success){
+    window._wordLists.unshift({Id:res.id,ListName:name,wordCount:0});
+    window._listItems[res.id]=[];
+    document.getElementById('bulk-new-name').value='';
+    await window.bulkAddToList(res.id);
+  }
+};
+
 window.openListPicker=async function(wordId,wordCol){
   _lpWordId=wordId;_lpWordCol=wordCol;
   const user=window._currentUser;
@@ -4028,10 +4110,12 @@ function renderList(){
     filtered=filtered.filter(x=>(x.word||'').toLowerCase().includes(q)||(x.tr||'').toLowerCase().includes(q));
   }
   document.getElementById('list-empty').classList.toggle('hidden',filtered.length>0);
+  window._bulkShown=filtered;
   document.getElementById('wlist').innerHTML=filtered.map(x=>{
     const listName=getWordListName(x._id);
     const isFav=listName!==null;
-    return `<div class="wli"><div class="wli-l"><div class="wli-w">${x.word}</div><div class="wli-t">${x.tr||''}${x.plural?' · Pl: '+x.plural:''}</div></div>
+    const chk=window._bulkMode?`<input type="checkbox" style="width:22px;height:22px;flex:none" ${window._bulkSel.has(x._id)?'checked':''} onclick="bulkToggle('${x._id}','${x._col}',this.checked)">`:'';
+    return `<div class="wli">${chk}<div class="wli-l"><div class="wli-w">${x.word}</div><div class="wli-t">${x.tr||''}${x.plural?' · Pl: '+x.plural:''}</div></div>
       ${listName?`<span style="font-size:11px;padding:2px 6px;border-radius:99px;background:var(--acl);color:var(--ac);cursor:pointer" onclick="openListPicker('${x._id}','${x._col}')" title="Liste ändern">${listName}</span>`:''}
       <button class="btn sm" style="font-size:18px;padding:3px 7px;color:${isFav?'#E0457B':'var(--txt3)'}" onclick="toggleFavorite('${x._id}','${x._col}')" title="Favorit"><i class="ti ${isFav?'ti-heart-filled':'ti-heart'}"></i></button>
       <button class="delbtn" onclick="delWord('${x._id}','${x._col}')" aria-label="Löschen"><i class="ti ti-trash"></i></button></div>`;
